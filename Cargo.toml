@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-reqwest = {version = "0.12.12", features = ["blocking", "json"]}
-tokio = {version = "1.41.0" , features = ["macros", "rt-multi-thread"]}
-tokio-macros ="2.5.0"
-serde_json = {version = "1.0.137"}
+reqwest = { version = "0.12.12", features = ["blocking", "json"] }
+tokio = { version = "1.41.0", features = ["macros", "rt-multi-thread"] }
+tokio-macros = "2.5.0"
+serde_json = { version = "1.0.137" }
 dotenv = "0.15.0"
-dotenv_codegen="0.15.0"
+dotenv_codegen = "0.15.0"
 anyhow = "1.0.95"
+clap = "4.5.27 "

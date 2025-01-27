@@ -1,0 +1,71 @@
+
+*** Overview ***
+Goal: Rust-based Crypto-native Agentic Framework & CLI for common blockchain actions
+
+3 modes:
+    (single) task mode   ::     user executes a single task / CLI command and gets result
+    (repl) interactive mode  ::    user interacts with the CLI in a REPL-like environment (multi-turn conversation)
+    (dev) development mode  ::    user interacts with the CLI in a REPL-like environment with raw outputs
+
+*** Main Function ***
+ |> display banner text
+ |> display version & authors info
+ |> parse arguments/determine mode via flags
+
+ ** flags **
+  `.nyota` -> menu (NO FLAG specified)
+        |> options:
+            |> REPL / interactive mode
+            |> Single Task
+            |> Help / Documentation
+            |> About
+            |> Quit
+  `.nyota --interactive \\ -i` -> interactive mode
+  `.nyota --dev \\ -d` -> development mode
+  `.nyota --task \\ -t` -> task mode
+
+*** API Adapter ***
+- The Basic Application Functionality is as follows:
+1. User inputs a command using natural language
+2. The application pre-parses the user input and submits it, along with the action schema to the LLM
+3. The LLM processes the input and action schema, and returns a suggested action to the application
+4. The user confirms the intended action
+5. The application routes the action to the appropriate API, according to the intended action (there is a layer of abstraction b/w API & action)
+ // NOTE : if dev mode is enabled, the raw API result is returned to the user (skip steps 6, 7)
+6. The API processes the action and the application submits the API result to the LLM
+7. The LLM processes the API result and returns a formatted response to the user
+
+*** Example Blockchain Actions ***
+    |> generate wallet
+    |> get balance
+    |> send transaction
+    |> get transaction
+    |> get block
+    |> get block height
+    |> get block hash
+    |> get block transactions
+
+*** Action Schema Format ***
+Action Schemas are the format in which the CLI will understand and process user commands. For example, the Agent needs some way to know that the user wants to generate a wallet, get the balance, or send a transaction, etc.
+
+We will define Action Schemas as a Rust struct for built-in actions.
+For user-define actions, we will use a JSON schema format that can be parsed into a Rust struct.
+
+The Action Schema will contain the following fields:
+    |> action_name: String
+    |> action_similes: Vec<String>
+    |> action_examples: Vec<String>
+    |> action_description: String
+    |> action_params: Vec<String>
+    |> action_callback: Function
+    |> action_response: String
+
+
+
+
+
+
+
+1. query the API: OpenAI rn (do validation and formatting for other API's)
+2. transform natural language command into an action
+3. perform the action -> plugin based, is possible to add new actions
