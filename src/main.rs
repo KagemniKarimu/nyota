@@ -1,10 +1,12 @@
 // #[macro_use]
 // extern crate dotenv_codegen;
 mod constants;
+mod cli;
 
+use cli::modes::Mode;
 // use reqwest::{Client, Response};
 // use serde_json::{json, Value};
-use clap::{Arg,ArgGroup,ArgAction,  Command};
+
 
 
 #[tokio::main]
@@ -14,28 +16,13 @@ use clap::{Arg,ArgGroup,ArgAction,  Command};
     println!("{}", constants::ui::BANNER);
     println!("{}", constants::ui::VERSION_PLAQUE);
 
-     let matches = Command::new("nyota")
-        .arg(Arg::new("interactive")
-            .short('i')
-            .long("interactive")
-            .action(ArgAction::SetTrue)
-            .help("Start in interactive REPL mode with pretty-print output"))
-        .arg(Arg::new("development")
-            .short('d')
-            .long("dev")
-            .action(ArgAction::SetTrue)
-            .help("Start in interactive REPL mode with raw API outputs"))
-        .arg(Arg::new("task")
-            .short('t')
-            .long("task")
-            .action(ArgAction::SetTrue)
-            .help("Execute a single task and quit"))
-        .group(ArgGroup::new("modes")
-            .args(["interactive", "development", "task"])
-            .required(true))  // Should make this optional to allow a default menu
-        .get_matches();
-
-     println!("{:?}",matches);
+    let mode_input = cli::modes::get_mode_input();
+    match mode_input.mode {
+        Mode::Interactive => println!("TODO:implement handle interactive"), // handle interactive,
+        Mode::Development =>  println!("TODO:implement handle development mode"),// handle development,
+        Mode::Task => println!("TODO:implement handle task mode"), // handle task,
+        Mode::Menu => println!("TODO:implement handle no flag / main menu"), // handle menu,
+    }
 
     // let api_key = dotenv!("OPEN_AI_API_KEY");
     // let api_key = match std::env::var("OPEN_AI_API_KEY"){
