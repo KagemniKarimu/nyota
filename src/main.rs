@@ -1,45 +1,43 @@
-#[macro_use]
-extern crate dotenv_codegen;
+// #[macro_use]
+// extern crate dotenv_codegen;
 mod constants;
 
-use reqwest::{Client, Response};
-use serde_json::{json, Value};
+// use reqwest::{Client, Response};
+// use serde_json::{json, Value};
 use clap::{Arg,ArgGroup,ArgAction,  Command};
 
 
 #[tokio::main]
  async fn main() {
+    dotenv::dotenv().ok();
+
+    println!("{}", constants::ui::BANNER);
+    println!("{}", constants::ui::VERSION_PLAQUE);
 
      let matches = Command::new("nyota")
         .arg(Arg::new("interactive")
             .short('i')
             .long("interactive")
-            .action(ArgAction::SetTrue))
+            .action(ArgAction::SetTrue)
+            .help("Start in interactive REPL mode with pretty-print output"))
         .arg(Arg::new("development")
             .short('d')
             .long("dev")
-            .action(ArgAction::SetTrue))
+            .action(ArgAction::SetTrue)
+            .help("Start in interactive REPL mode with raw API outputs"))
         .arg(Arg::new("task")
             .short('t')
             .long("task")
-            .action(ArgAction::SetTrue))
+            .action(ArgAction::SetTrue)
+            .help("Execute a single task and quit"))
         .group(ArgGroup::new("modes")
             .args(["interactive", "development", "task"])
-            .required(true));
+            .required(true))  // Should make this optional to allow a default menu
+        .get_matches();
 
      println!("{:?}",matches);
 
-
-
-
-     dotenv::dotenv().ok();
-
-
-    println!("{}", constants::ui::BANNER);
-
-    println!("{}", constants::ui::VERSION_PLAQUE);
-
-    let api_key = dotenv!("OPEN_AI_API_KEY");
+    // let api_key = dotenv!("OPEN_AI_API_KEY");
     // let api_key = match std::env::var("OPEN_AI_API_KEY"){
     //     Ok(String) => api_key,
     //     Error(e) => {
