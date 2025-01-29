@@ -1,10 +1,11 @@
 use ratatui::{
-    Frame,
+    Frame, Terminal,
+    backend::CrosstermBackend,
     layout::Rect,
     style::{Style, Color},
     widgets::{Block, Borders, List, ListItem, ListState},
 };
-
+use std::io::Stdout;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use color_eyre::Result;
 
@@ -112,9 +113,7 @@ impl Menu {
         frame.render_stateful_widget(list, area, &mut self.state);
     }
 
-    pub fn run(mut self) -> Result<()> {
-         // Initialize the terminal
-         let mut terminal = ratatui::init();
+    pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
 
          // Application loop
          loop {

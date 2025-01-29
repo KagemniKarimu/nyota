@@ -6,13 +6,15 @@ mod tui;
 
 use cli::modes::Mode;
 use tui::menu::Menu;
-// use reqwest::{Client, Response};
-// use serde_json::{json, Value};
+use tui::splash::SplashScreen;
+use anyhow::Result;
+use ratatui::{Terminal, backend::CrosstermBackend};
+use std::io::Stdout;
 
 
 
 #[tokio::main]
- async fn main() {
+ async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
     println!("{}", constants::ui::BANNER);
@@ -20,35 +22,44 @@ use tui::menu::Menu;
 
     let mode_input = cli::modes::get_mode_input();
     match mode_input.mode {
-        Mode::Interactive => handle_interactive(), // handle interactive,
-        Mode::Development =>  handle_development(),// handle development,
+        Mode::Interactive => handle_interactive(),
+        Mode::Development =>  handle_development(),
         Mode::Task => handle_task(),
-        Mode::Menu => display_main_menu(), // handle menu,
+        Mode::Menu => handle_menu(),
     }
 }
 
-fn display_main_menu()  {
-    let menu = Menu::new();
-    match menu.run() {
-        Ok(()) => {
-            // Everything worked fine
-        }
-        Err(e) => {
-            // Handle the error
-            eprintln!("An error occurred: {}", e);
-            std::process::exit(1);
-        }
-    }
+fn display_splash_screen(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    let splash = SplashScreen::new();
+    splash.show(terminal)
 }
 
-fn handle_task() {
+fn display_main_menu(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    let mut menu = Menu::new();
+    menu.run(terminal);
+    Ok(())
+}
+
+fn handle_menu() -> Result<()> {
+    // Initialize terminal once
+    let mut terminal = ratatui::init();
+
+    display_splash_screen(&mut terminal)?;
+    display_main_menu(&mut terminal)?;
+
+    // Cleanup
+    ratatui::restore();
+    Ok(())
+}
+
+fn handle_task() -> Result<()> {
     todo!("TODO:implement handle task");
 }
 
-fn handle_interactive() {
+fn handle_interactive() -> Result<()> {
     todo!("TODO:implement handle interactive");
 }
 
-fn handle_development() {
+fn handle_development() -> Result<()> {
     todo!("TODO:implement handle development");
 }
