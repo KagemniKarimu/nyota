@@ -65,7 +65,6 @@ The Action Schema will contain the following fields:
 
 
 
-
 1. query the API: OpenAI rn (do validation and formatting for other API's)
 2. transform natural language command into an action
 3. perform the action -> plugin based, is possible to add new actions
