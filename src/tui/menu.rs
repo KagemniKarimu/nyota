@@ -2,8 +2,10 @@ use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::Rect,
+    text::{Line, Span},
+    prelude::{Stylize, Alignment, Modifier},
     style::{Style, Color},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, BorderType, List, ListItem, ListState},
 };
 use std::io::Stdout;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -28,16 +30,28 @@ impl Menu {
         let items = vec![
             MenuItem {
                 title: String::from("Interactive Mode"),
-                description: String::from("Start an interactive chat session"),
-            },
-            MenuItem {
-                title: String::from("Development Mode"),
-                description: String::from("Access development tools"),
+                description: String::from("Start an interactive REPL session (Multi-turn Conversation)"),
             },
             MenuItem {
                 title: String::from("Task Mode"),
-                description: String::from("Run specific tasks"),
+                description: String::from("Execute an isolated task (Single-turn Conversation)"),
             },
+            MenuItem {
+                title: String::from("Development Mode"),
+                description: String::from("Start an interactive REPL session with raw outputs"),
+            },
+            MenuItem {
+                title: String::from("Help"),
+                description: String::from("Access NYOTA documentation"),
+            },
+            MenuItem {
+                title: String::from("About"),
+                description: String::from("Learn about Nyota"),
+            },
+            MenuItem{
+                title: String::from("Exit"),
+                description: String::from("Quit the application"),
+            }
         ];
 
         // Create the menu with those items and initialize the state
@@ -84,30 +98,53 @@ impl Menu {
 
     /// Draw the menu on the screen
     pub fn draw(&mut self, frame: &mut Frame, area: Rect) {
-        // First, let's create a block that will serve as our menu's border and title
-        let menu_block = Block::default()
-            .title("Nyota Menu")  // Add a title to our menu
-            .borders(Borders::ALL);  // Add borders on all sides
+        // Add a fancy title block
+        let title_block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Double)  // ═══ style border
+            .border_style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .bold()
+            )
+            .title(" Nyota ")  // Space padding for aesthetics
+            .title_alignment(Alignment::Center);
 
-        // Now let's prepare our menu items for display
-        let items: Vec<ListItem> = self
-            .items
+        // Style the menu items
+        let items: Vec<ListItem> = self.items
             .iter()
             .map(|item| {
-                // Convert each MenuItem into a ListItem
-                ListItem::new(format!("{}\n{}", item.title, item.description))
+                // Create a styled title
+                let title = Line::from(vec![
+                    Span::styled(
+                        &item.title,
+                        Style::default().fg(Color::White).bold()
+                    )
+                ]);
+
+                // Create a styled description
+                let description = Line::from(vec![
+                    Span::styled(
+                        &item.description,
+                        Style::default().fg(Color::Gray)  // Dimmer color for description
+                    )
+                ]);
+
+                // Combine them into a single ListItem with spacing
+                ListItem::new(vec![title, description, Line::from("")])  // Empty line for spacing
             })
             .collect();
 
-        // Create the actual list widget
+        // Create styled list
         let list = List::new(items)
-            .block(menu_block)  // Use our block from above
-            .highlight_style(  // Style for the selected item
+            .block(title_block)
+            .highlight_style(
                 Style::default()
-                    .bg(Color::Blue)  // Blue background
-                    .fg(Color::Black)  // Black text
+                    .bg(Color::Cyan)
+                    .fg(Color::Black)
+                    .add_modifier(Modifier::BOLD)
             )
-            .highlight_symbol(">> ");  // Show an arrow before selected item
+            .highlight_symbol("> ✨ ");
 
         // Render the list widget with our state
         frame.render_stateful_widget(list, area, &mut self.state);
