@@ -39,7 +39,7 @@ pub fn get_mode_input() -> ModeSettings {
         .group(
             ArgGroup::new("modes")
                 .args(["interactive", "development", "task"])
-                .required(false)
+                .required(false) // set to false because we need to send to menu
                 .multiple(false),
         )
         .get_matches();
