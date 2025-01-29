@@ -1,11 +1,11 @@
 // #[macro_use]
 // extern crate dotenv_codegen;
-mod constants;
 mod cli;
 mod tui;
 
 use cli::modes::Mode;
-use tui::menu::Menu;
+use tui::banner::get_version_plaque;
+use tui::{banner::get_banner, menu::Menu};
 use tui::splash::SplashScreen;
 use anyhow::Result;
 use ratatui::{Terminal, backend::CrosstermBackend};
@@ -17,8 +17,8 @@ use std::io::Stdout;
  async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
-    println!("{}", constants::ui::BANNER);
-    println!("{}", constants::ui::VERSION_PLAQUE);
+    println!("{}", get_banner());
+    println!("{}", get_version_plaque());
 
     let mode_input = cli::modes::get_mode_input();
     match mode_input.mode {
@@ -36,7 +36,12 @@ fn display_splash_screen(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> R
 
 fn display_main_menu(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
     let mut menu = Menu::new();
-    menu.run(terminal);
+    match menu.run(terminal) {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("Error: {}", e);
+        }
+    }
     Ok(())
 }
 
