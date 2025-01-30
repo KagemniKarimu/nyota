@@ -2,15 +2,15 @@
 // extern crate dotenv_codegen;
 mod cli;
 mod tui;
+mod snd;
 
 use cli::modes::Mode;
-use tui::banner::get_version_plaque;
-use tui::{banner::get_banner, menu::Menu};
-use tui::splash::SplashScreen;
+use tui::{banner::get_banner,banner::get_version_plaque, menu::Menu, splash::SplashScreen};
+
 use anyhow::Result;
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io::Stdout;
-
+use snd::player::play_welcome_chirp;
 
 
 #[tokio::main]
@@ -25,11 +25,12 @@ use std::io::Stdout;
         Mode::Interactive => handle_interactive(),
         Mode::Development =>  handle_development(),
         Mode::Task => handle_task(),
-        Mode::Menu => handle_menu(),
+        Mode::Menu => handle_menu().await,
     }
 }
 
-fn display_splash_screen(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+async fn display_splash_screen(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    play_welcome_chirp();
     let splash = SplashScreen::new();
     splash.show(terminal)
 }
@@ -45,11 +46,11 @@ fn display_main_menu(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Resul
     Ok(())
 }
 
-fn handle_menu() -> Result<()> {
+async fn handle_menu() -> Result<()> {
     // Initialize terminal once
     let mut terminal = ratatui::init();
 
-    display_splash_screen(&mut terminal)?;
+    display_splash_screen(&mut terminal).await?;
     display_main_menu(&mut terminal)?;
 
     // Cleanup

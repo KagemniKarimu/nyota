@@ -1,3 +1,4 @@
+
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -10,6 +11,7 @@ use ratatui::{
 use std::io::Stdout;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use color_eyre::Result;
+use crate::snd::player::play_menu_toggle_noise;
 
 /// Represents a menu option
 struct MenuItem {
@@ -170,10 +172,12 @@ impl Menu {
                          }
                          KeyCode::Down | KeyCode::Char('j') => {
                              // Move selection down
+                             play_menu_toggle_noise();
                              self.next();
                          }
                          KeyCode::Up | KeyCode::Char('k') => {
                              // Move selection up
+                             play_menu_toggle_noise();
                              self.previous();
                          }
                          KeyCode::Enter => {
