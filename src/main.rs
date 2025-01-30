@@ -1,20 +1,21 @@
 // #[macro_use]
 // extern crate dotenv_codegen;
 mod cli;
-mod tui;
 mod snd;
+mod tui;
 
 use cli::modes::Mode;
-use tui::{banner::get_banner,banner::get_version_plaque, menu::Menu, splash::SplashScreen};
+use tui::interactive::ChatInterface;
+use tui::menu::MenuAction;
+use tui::{banner::get_banner, banner::get_version_plaque, menu::Menu, splash::SplashScreen};
 
 use anyhow::Result;
-use ratatui::{Terminal, backend::CrosstermBackend};
-use std::io::Stdout;
+use ratatui::{backend::CrosstermBackend, Terminal};
 use snd::player::play_welcome_chirp;
-
+use std::io::Stdout;
 
 #[tokio::main]
- async fn main() -> Result<()> {
+async fn main() -> Result<()> {
     dotenv::dotenv().ok();
 
     println!("{}", get_banner());
@@ -23,7 +24,7 @@ use snd::player::play_welcome_chirp;
     let mode_input = cli::modes::get_mode_input();
     match mode_input.mode {
         Mode::Interactive => handle_interactive(),
-        Mode::Development =>  handle_development(),
+        Mode::Development => handle_development(),
         Mode::Task => handle_task(),
         Mode::Menu => handle_menu().await,
     }
@@ -35,15 +36,21 @@ async fn display_splash_screen(terminal: &mut Terminal<CrosstermBackend<Stdout>>
     splash.show(terminal)
 }
 
-fn display_main_menu(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+fn display_main_menu(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<MenuAction> {
     let mut menu = Menu::new();
-    match menu.run(terminal) {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("Error: {}", e);
+    match menu.run(terminal)? {
+        MenuAction::Interactive => handle_interactive()?,
+        MenuAction::Task => handle_task()?,
+        MenuAction::Development => handle_development()?,
+        MenuAction::Help => {
+            todo!("  /* TODO: Implement help */ ")
         }
+        MenuAction::About => {
+            todo!("/* TODO: Implement about */")
+        }
+        MenuAction::Exit => {}
     }
-    Ok(())
+    Ok(MenuAction::Exit)
 }
 
 async fn handle_menu() -> Result<()> {
@@ -63,7 +70,17 @@ fn handle_task() -> Result<()> {
 }
 
 fn handle_interactive() -> Result<()> {
-    todo!("TODO:implement handle interactive");
+    // Initialize terminal
+    let mut terminal = ratatui::init();
+
+    // Create and run chat interface
+    let mut chat = ChatInterface::new();
+    let result = chat.run(&mut terminal);
+
+    // Cleanup
+    ratatui::restore();
+
+    result
 }
 
 fn handle_development() -> Result<()> {

@@ -1,17 +1,16 @@
-
+use crate::snd::player::play_menu_toggle_noise;
+use anyhow::Result;
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{
-    Frame, Terminal,
     backend::CrosstermBackend,
     layout::Rect,
+    prelude::{Alignment, Modifier, Stylize},
+    style::{Color, Style},
     text::{Line, Span},
-    prelude::{Stylize, Alignment, Modifier},
-    style::{Style, Color},
-    widgets::{Block, Borders, BorderType, List, ListItem, ListState},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState},
+    Frame, Terminal,
 };
 use std::io::Stdout;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use color_eyre::Result;
-use crate::snd::player::play_menu_toggle_noise;
 
 /// Represents a menu option
 struct MenuItem {
@@ -22,7 +21,16 @@ struct MenuItem {
 /// Our main menu structure
 pub struct Menu {
     items: Vec<MenuItem>,
-    state: ListState,  // Keeps track of which item is selected
+    state: ListState, // Keeps track of which item is selected
+}
+
+pub enum MenuAction {
+    Interactive,
+    Task,
+    Development,
+    Help,
+    About,
+    Exit,
 }
 
 impl Menu {
@@ -32,7 +40,9 @@ impl Menu {
         let items = vec![
             MenuItem {
                 title: String::from("Interactive Mode"),
-                description: String::from("Start an interactive REPL session (Multi-turn Conversation)"),
+                description: String::from(
+                    "Start an interactive REPL session (Multi-turn Conversation)",
+                ),
             },
             MenuItem {
                 title: String::from("Task Mode"),
@@ -50,10 +60,10 @@ impl Menu {
                 title: String::from("About"),
                 description: String::from("Learn about Nyota"),
             },
-            MenuItem{
+            MenuItem {
                 title: String::from("Exit"),
                 description: String::from("Quit the application"),
-            }
+            },
         ];
 
         // Create the menu with those items and initialize the state
@@ -73,12 +83,12 @@ impl Menu {
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= self.items.len() - 1 {
-                    0  // Wrap around to the first item
+                    0 // Wrap around to the first item
                 } else {
-                    i + 1  // Move to next item
+                    i + 1 // Move to next item
                 }
             }
-            None => 0,  // If nothing is selected, select the first item
+            None => 0, // If nothing is selected, select the first item
         };
         self.state.select(Some(i));
     }
@@ -88,12 +98,12 @@ impl Menu {
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.items.len() - 1  // Wrap around to the last item
+                    self.items.len() - 1 // Wrap around to the last item
                 } else {
-                    i - 1  // Move to previous item
+                    i - 1 // Move to previous item
                 }
             }
-            None => 0,  // If nothing is selected, select the first item
+            None => 0, // If nothing is selected, select the first item
         };
         self.state.select(Some(i));
     }
@@ -103,37 +113,30 @@ impl Menu {
         // Add a fancy title block
         let title_block = Block::default()
             .borders(Borders::ALL)
-            .border_type(BorderType::Double)  // ═══ style border
-            .border_style(
-                Style::default()
-                    .fg(Color::Cyan)
-                    .bold()
-            )
-            .title(" Nyota ")  // Space padding for aesthetics
+            .border_type(BorderType::Double) // ═══ style border
+            .border_style(Style::default().fg(Color::Cyan).bold())
+            .title(" Nyota ") // Space padding for aesthetics
             .title_alignment(Alignment::Center);
 
         // Style the menu items
-        let items: Vec<ListItem> = self.items
+        let items: Vec<ListItem> = self
+            .items
             .iter()
             .map(|item| {
                 // Create a styled title
-                let title = Line::from(vec![
-                    Span::styled(
-                        &item.title,
-                        Style::default().fg(Color::White).bold()
-                    )
-                ]);
+                let title = Line::from(vec![Span::styled(
+                    &item.title,
+                    Style::default().fg(Color::White).bold(),
+                )]);
 
                 // Create a styled description
-                let description = Line::from(vec![
-                    Span::styled(
-                        &item.description,
-                        Style::default().fg(Color::Gray)  // Dimmer color for description
-                    )
-                ]);
+                let description = Line::from(vec![Span::styled(
+                    &item.description,
+                    Style::default().fg(Color::Gray), // Dimmer color for description
+                )]);
 
                 // Combine them into a single ListItem with spacing
-                ListItem::new(vec![title, description, Line::from("")])  // Empty line for spacing
+                ListItem::new(vec![title, description, Line::from("")]) // Empty line for spacing
             })
             .collect();
 
@@ -144,7 +147,7 @@ impl Menu {
                 Style::default()
                     .bg(Color::Cyan)
                     .fg(Color::Black)
-                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("> ✨ ");
 
@@ -152,47 +155,56 @@ impl Menu {
         frame.render_stateful_widget(list, area, &mut self.state);
     }
 
-    pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<MenuAction> {
+        // Application loop
+        loop {
+            // Draw the current state
+            terminal.draw(|frame| {
+                // Use the entire screen area
+                self.draw(frame, frame.area());
+            })?;
 
-         // Application loop
-         loop {
-             // Draw the current state
-             terminal.draw(|frame| {
-                 // Use the entire screen area
-                 self.draw(frame, frame.area());
-             })?;
+            // Handle keyboard input
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    match key.code {
+                        KeyCode::Char('q') | KeyCode::Esc => {
+                            // Quit if user presses 'q' or Esc
+                            break;
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            // Move selection down
+                            play_menu_toggle_noise();
+                            self.next();
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            // Move selection up
+                            play_menu_toggle_noise();
+                            self.previous();
+                        }
+                        KeyCode::Enter => {
+                            // Convert menu selection to action
+                            if let Some(selected) = self.state.selected() {
+                                return Ok(match selected {
+                                    0 => MenuAction::Interactive,
+                                    1 => MenuAction::Task,
+                                    2 => MenuAction::Development,
+                                    3 => MenuAction::Help,
+                                    4 => MenuAction::About,
+                                    5 => MenuAction::Exit,
+                                    _ => MenuAction::Exit,
+                                });
+                            }
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
 
-             // Handle keyboard input
-             if let Event::Key(key) = event::read()? {
-                 if key.kind == KeyEventKind::Press {
-                     match key.code {
-                         KeyCode::Char('q') | KeyCode::Esc => {
-                             // Quit if user presses 'q' or Esc
-                             break;
-                         }
-                         KeyCode::Down | KeyCode::Char('j') => {
-                             // Move selection down
-                             play_menu_toggle_noise();
-                             self.next();
-                         }
-                         KeyCode::Up | KeyCode::Char('k') => {
-                             // Move selection up
-                             play_menu_toggle_noise();
-                             self.previous();
-                         }
-                         KeyCode::Enter => {
-                             // Here you would handle menu item selection
-                             // For now, we'll just break
-                             break;
-                         }
-                         _ => {}
-                     }
-                 }
-             }
-         }
-
-         // Restore terminal
-         ratatui::restore();
-         Ok(())
-     }
- }
+        // Restore terminal
+        ratatui::restore();
+        Ok(MenuAction::Exit)
+    }
+}
