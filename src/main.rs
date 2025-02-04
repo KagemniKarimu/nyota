@@ -1,18 +1,18 @@
 // #[macro_use]
 // extern crate dotenv_codegen;
+mod api;
 mod cli;
 mod snd;
 mod tui;
 
-use cli::modes::Mode;
-use tui::interactive::ChatInterface;
-use tui::menu::MenuAction;
-use tui::{banner::get_banner, banner::get_version_plaque, menu::Menu, splash::SplashScreen};
-
 use anyhow::Result;
+use api::adapter::parse_anthropic_response;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use snd::player::play_welcome_chirp;
 use std::io::Stdout;
+use tui::interactive::ChatInterface;
+use tui::menu::MenuAction;
+use tui::{banner::get_banner, banner::get_version_plaque, menu::Menu, splash::SplashScreen};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,13 +21,15 @@ async fn main() -> Result<()> {
     println!("{}", get_banner());
     println!("{}", get_version_plaque());
 
-    let mode_input = cli::modes::get_mode_input();
-    match mode_input.mode {
-        Mode::Interactive => handle_interactive(),
-        Mode::Development => handle_development(),
-        Mode::Task => handle_task(),
-        Mode::Menu => handle_menu().await,
-    }
+    parse_anthropic_response();
+    // let mode_input = cli::modes::get_mode_input();
+    // match mode_input.mode {
+    //    Mode::Development => handle_development(),
+    //    Mode::Interactive => handle_interactive(),
+    //    Mode::Task => handle_task(),
+    //    Mode::Menu => handle_menu().await,
+    //}
+    Ok(())
 }
 
 async fn display_splash_screen(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
