@@ -146,6 +146,34 @@ impl<'a> ChatInterface<'a> {
         frame.render_widget(status_widget, area);
     }
 
+    fn send_message(&mut self) {
+        let input_content = self.input.lines().join("\n");
+        if !input_content.trim().is_empty() {
+            // Add user message
+            self.messages.push(Message {
+                content: input_content,
+                timestamp: Utc::now(),
+                is_user: true,
+            });
+
+            // Clear the input
+            self.input.select_all();
+            self.input.delete_char();
+
+            // Update message count in status
+            self.status.message_count = self.messages.len();
+
+            // TODO: Here you would typically send the message to the AI
+            // and add its response
+            // For now, let's just add a mock response
+            self.messages.push(Message {
+                content: "This is a mock response.".to_string(),
+                timestamp: Utc::now(),
+                is_user: false,
+            });
+        }
+    }
+
     pub fn render(&mut self, frame: &mut Frame, area: Rect) {
         let (message_area, input_area, status_area) = Self::create_layout(area);
 
@@ -155,7 +183,32 @@ impl<'a> ChatInterface<'a> {
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Cyan));
-        frame.render_widget(messages_block, message_area);
+
+        // Create message display
+        let messages: Vec<Line> = self
+            .messages
+            .iter()
+            .map(|msg| {
+                let prefix = if msg.is_user { "You: " } else { "AI: " };
+                Line::from(vec![
+                    Span::styled(
+                        prefix,
+                        Style::default().fg(if msg.is_user {
+                            Color::Green
+                        } else {
+                            Color::Blue
+                        }),
+                    ),
+                    Span::raw(msg.content.clone()),
+                ])
+            })
+            .collect();
+
+        let messages_paragraph = Paragraph::new(messages)
+            .block(messages_block)
+            .wrap(ratatui::widgets::Wrap { trim: true });
+
+        frame.render_widget(messages_paragraph, message_area);
 
         // Render input area
         frame.render_widget(self.input.widget(), input_area);
@@ -176,16 +229,19 @@ impl<'a> ChatInterface<'a> {
                         break;
                     }
                     KeyCode::Enter => {
+                        if key.modifiers.contains(event::KeyModifiers::CONTROL) {
+                            play_backspace();
+                        }
                         play_message_sent(); // Play sound when sending message
-                                             // Handle message sending
+                        self.send_message();
+                        // Handle message sending
                     }
                     KeyCode::Backspace => {
-                        play_enter();
                         play_backspace(); // Play sound when deleting
                         self.input.input(key);
                     }
                     _ => {
-                        play_keystroke2(); // Play sound for normal keystrokes
+                        // Play sound for normal keystrokes
                         self.input.input(key);
                     }
                 }
