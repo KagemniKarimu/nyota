@@ -3,7 +3,7 @@ use anyhow::{Error, Result};
 use std::env::{self, VarError};
 
 use reqwest::{Client, Response};
-use serde_json::json;
+use serde_json::{json, Value};
 
 pub enum Model {
     OPENAI,
@@ -38,18 +38,15 @@ fn get_api_key(selected_model: Model) -> Result<String, VarError> {
 
 fn get_default_ai_model() -> Result<Model, Error> {
     let model_name = env::var("DEFAULT_AI_MODEL");
-    let c = "CHATGPT".to_string();
-    match model_name {
-        Ok("CHATGPT".to_string()) => Ok(Model::OPENAI),
-        "ANTHROPIC" => Ok(Model::ANTHROPIC),
+    match model_name.as_deref() {
+        Ok("CHATGPT") => Ok(Model::OPENAI),
+        Ok("ANTHROPIC") => Ok(Model::ANTHROPIC),
         // "OLLAMA" => {
         //     Todo!("Implement Ollama Support")
         // }
-        "OPENROUTER" => Ok(Model::OPENROUTER),
-        _ => Error::msg("Invalid default AI model"),
-    };
-
-    return model_name;
+        Ok("OPENROUTER") => Ok(Model::OPENROUTER),
+        _ => Err(Error::msg("Invalid default AI model")),
+    }
 }
 
 fn construct_test_json(model: Model) {
@@ -123,25 +120,26 @@ fn construct_test_json(model: Model) {
 //         eprintln!("Error body: {}", err);
 //     }
 // }
-
-fn parse_response(model: Model) {
+pub async fn parse_response(model: Model) {
     match model {
         Model::OPENAI => {
-            parse_openai_response();
+            parse_openai_response().await;
         }
         Model::ANTHROPIC => {
-            parse_anthropic_response();
+            parse_anthropic_response().await;
         }
         //        Model::OLLAMA => {
         //            parse_ollama_response();
         //        }
         Model::OPENROUTER => {
-            parse_openrouter_response();
+            parse_openrouter_response().await;
         }
     }
 }
 
-fn parse_openai_response() {}
+async fn parse_openai_response() {
+    // Implement the async logic for OpenAI response parsing
+}
 
 pub async fn parse_anthropic_response() {
     let url = ANTHROPIC_API_URL;
@@ -179,8 +177,13 @@ pub async fn parse_anthropic_response() {
         .unwrap();
 
     if resp.status().is_success() {
-        let resp_text = resp.text().await.unwrap();
-        println!("{:?}", resp_text);
+        //let resp_text = resp.text().await.unwrap();
+        let json_resp: Value = resp.json().await.unwrap();
+        if let Some(content) = json_resp["content"].get(0) {
+            if let Some(text) = content["text"].as_str() {
+                println!("Message: {}", text);
+            }
+        }
     } else {
         let err = resp.text().await.unwrap();
         eprintln!("Error body: {}", err);
@@ -191,8 +194,8 @@ fn parse_ollama_response() {
     todo!("Implement Ollama Response Parsing")
 }
 
-fn parse_openrouter_response() {
-    todo!("Implement Anthropic Response Parsing")
+async fn parse_openrouter_response() {
+    // Implement the async logic for OpenRouter response parsing
 }
 
 //match
