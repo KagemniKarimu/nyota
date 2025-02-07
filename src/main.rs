@@ -6,7 +6,7 @@ mod snd;
 mod tui;
 
 use anyhow::Result;
-use api::adapter::parse_anthropic_response;
+use api::adapter::*;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use snd::player::play_welcome_chirp;
 use std::io::Stdout;
@@ -21,6 +21,7 @@ async fn main() -> Result<()> {
     println!("{}", get_banner());
     println!("{}", get_version_plaque());
 
+    parse_openai_response().await;
     parse_anthropic_response().await;
     // let mode_input = cli::modes::get_mode_input();
     // match mode_input.mode {

@@ -137,24 +137,43 @@ pub async fn parse_response(model: Model) {
     }
 }
 
-async fn parse_openai_response() {
+pub async fn parse_openai_response() {
     // Implement the async logic for OpenAI response parsing
+    let url = OPENAI_API_URL;
+    let api_key = get_api_key(Model::OPENAI).unwrap();
+    let req = json!({
+        "model": "gpt-4o-mini",
+        "messages": [{ "role": "user", "content": "Say this is a test" }],
+        "store": true,
+        "stream": false,
+    });
+
+    let client = Client::new();
+
+    let resp: Response = client
+        .post(url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&req)
+        .send()
+        .await
+        .unwrap();
+
+    if resp.status().is_success() {
+        let json_resp: Value = resp.json().await.unwrap();
+        if let Some(first_choice) = json_resp["choices"].get(0) {
+            if let Some(content) = first_choice["message"]["content"].as_str() {
+                println!("Message: {}", content);
+            }
+        }
+    } else {
+        let err = resp.text().await.unwrap();
+        eprintln!("Error body: {}", err);
+    }
 }
 
 pub async fn parse_anthropic_response() {
     let url = ANTHROPIC_API_URL;
-    // curl https://api.anthropic.com/v1/messages \
-    //      --header "x-api-key: $ANTHROPIC_API_KEY" \
-    //      --header "anthropic-version: 2023-06-01" \
-    //      --header "content-type: application/json" \
-    //      --data \
-    // '{
-    //     "model": "claude-3-5-sonnet-20241022",
-    //     "max_tokens": 1024,
-    //     "messages": [
-    //         {"role": "user", "content": "Hello, world"}
-    //     ]
-    //
     let api_key = get_api_key(Model::ANTHROPIC).unwrap();
     let req = json!({
         "model": "claude-3-5-sonnet-20241022",
