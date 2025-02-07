@@ -64,7 +64,7 @@ pub fn play_keystroke2() {
         let sink = Sink::try_new(&stream_handle).unwrap();
 
         // Short white noise burst for a "click" effect
-        let source = PinkNoise::new(rodio::cpal::SampleRate((3000)))
+        let source = PinkNoise::new(rodio::cpal::SampleRate(3000))
             .take_duration(Duration::from_millis(10))
             .amplify(0.1);
 
@@ -94,7 +94,7 @@ pub fn play_backspace() {
         let sink = Sink::try_new(&stream_handle).unwrap();
 
         // Using noise for a sharp, short sound
-        let source = PinkNoise::new(rodio::cpal::SampleRate((10)))
+        let source = PinkNoise::new(rodio::cpal::SampleRate(10))
             .take_duration(Duration::from_millis(20))
             .amplify(0.1);
 

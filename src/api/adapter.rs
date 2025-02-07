@@ -155,7 +155,7 @@ pub async fn parse_anthropic_response() {
     //         {"role": "user", "content": "Hello, world"}
     //     ]
     //
-    let api_key = "<API>";
+    let api_key = get_api_key(Model::ANTHROPIC).unwrap();
     let req = json!({
         "model": "claude-3-5-sonnet-20241022",
         "max_tokens": 1024,
@@ -168,7 +168,7 @@ pub async fn parse_anthropic_response() {
 
     let resp: Response = client
         .post(url)
-        .header("x-api-key", format!("Bearer {}", api_key))
+        .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")
         .json(&req)
@@ -177,7 +177,6 @@ pub async fn parse_anthropic_response() {
         .unwrap();
 
     if resp.status().is_success() {
-        //let resp_text = resp.text().await.unwrap();
         let json_resp: Value = resp.json().await.unwrap();
         if let Some(content) = json_resp["content"].get(0) {
             if let Some(text) = content["text"].as_str() {
