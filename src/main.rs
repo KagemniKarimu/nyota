@@ -21,8 +21,9 @@ async fn main() -> Result<()> {
     println!("{}", get_banner());
     println!("{}", get_version_plaque());
 
-    parse_openai_response().await;
-    parse_anthropic_response().await;
+    let api_adapter = Adapter::new();
+
+    println!("{:?}", api_adapter);
     // let mode_input = cli::modes::get_mode_input();
     // match mode_input.mode {
     //    Mode::Development => handle_development(),

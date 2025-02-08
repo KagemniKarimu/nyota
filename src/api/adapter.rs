@@ -5,142 +5,111 @@ use std::env::{self, VarError};
 use reqwest::{Client, Response};
 use serde_json::{json, Value};
 
-pub enum Model {
+#[derive(Debug)]
+pub enum ApiProvider {
     OPENAI,
     ANTHROPIC,
-    //OLLAMA,
+    OLLAMA,
     OPENROUTER,
 }
 
-pub struct Adapter {
-    model: Model,
-    api_key: String,
-    default_ai_model: String,
+impl Default for ApiProvider {
+    fn default() -> Self {
+        ApiProvider::OPENAI
+    }
 }
 
-fn get_api_key(selected_model: Model) -> Result<String, VarError> {
-    let api_name = match selected_model {
-        Model::OPENAI => env::var("OPENAI_API_KEY"),
-        Model::ANTHROPIC => env::var("ANTHROPIC_API_KEY"),
-        // Model::OLLAMA => {
-        //     Todo!("Implement Ollama Support")
-        // }
-        Model::OPENROUTER => env::var("OPENROUTER_API_KEY"),
-        _ => Err(VarError::NotPresent),
+// Adapter will act as an instance which tracks global state
+#[derive(Debug)]
+pub struct Adapter {
+    current_api_provider: ApiProvider,
+    active_api_key: String,
+    selected_model: String,
+}
+
+impl Adapter {
+    const DEFAULT_MODEL: &str = "gpt-4o-mini";
+    const SUPPORTED_MODELS: &'static [&'static str] =
+        &["gpt-4o-mini", "gpt-4o", "claude-3", "ollama", "openrouter"];
+
+    pub fn new() -> Self {
+        let ai_model =
+            get_ai_model_from_env().unwrap_or_else(|| String::from(Adapter::DEFAULT_MODEL));
+        let api_provider = get_api_provider_from_model(&ai_model).unwrap_or_default();
+        let api_key = get_api_key_from_env(&api_provider).unwrap_or_else(|_| String::from(""));
+
+        Self {
+            selected_model: ai_model,
+            current_api_provider: api_provider,
+            active_api_key: api_key,
+        }
+    }
+}
+
+fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, VarError> {
+    let api_name = match selected_provider {
+        ApiProvider::OPENAI => env::var("OPENAI_API_KEY"),
+        ApiProvider::ANTHROPIC => env::var("ANTHROPIC_API_KEY"),
+        ApiProvider::OLLAMA => {
+            todo!("Implement Ollama Support")
+        }
+        ApiProvider::OPENROUTER => env::var("OPENROUTER_API_KEY"),
     };
 
-    // match api_name {
-    //     Ok(val) => val,
-    //     Err(e) => Error::msg("{:?} not found in .env file", api_name),
-    // }
+    match api_name {
+        Ok(ref _val) => println!("{:?} API Key Loaded.", selected_provider),
+        Err(VarError::NotPresent) => {
+            eprintln!("Error: {:?} API Key undetected.", selected_provider)
+        }
+        Err(VarError::NotUnicode(_)) => {
+            println!("Error: {:?} API Key unreadable.", selected_provider)
+        }
+    }
     return api_name;
 }
 
-fn get_default_ai_model() -> Result<Model, Error> {
-    let model_name = env::var("DEFAULT_AI_MODEL");
-    match model_name.as_deref() {
-        Ok("CHATGPT") => Ok(Model::OPENAI),
-        Ok("ANTHROPIC") => Ok(Model::ANTHROPIC),
-        // "OLLAMA" => {
-        //     Todo!("Implement Ollama Support")
-        // }
-        Ok("OPENROUTER") => Ok(Model::OPENROUTER),
+fn get_api_provider_from_model(model_name: &String) -> Result<ApiProvider, Error> {
+    // Rewrite this to use Supported Models and handle dynamically
+
+    match model_name.as_str() {
+        "gpt-4" => Ok(ApiProvider::OPENAI),
+        "gpt-4o" => Ok(ApiProvider::OPENAI),
+        "gpt-4o-mini" => Ok(ApiProvider::OPENAI),
+        "sonnet" => Ok(ApiProvider::ANTHROPIC),
+        "ollama" => {
+            todo!("Implement Ollama Support")
+        }
+        "openrouter" => Ok(ApiProvider::OPENROUTER),
         _ => Err(Error::msg("Invalid default AI model")),
     }
 }
 
-fn construct_test_json(model: Model) {
-    json!({
-        "model":"gpt-4o-mini",
-        "messages": [{ "role": "user", "content": "Say this is a test" }],
-        "store": true,
-        "stream": false,
-    });
-
-    json!({
-        "model": "claude-3.5",
-        "messages": [
-            {
-                "role": "user",
-                "content": "Say this is a test"
-            }
-        ],
-        "max_tokens": 1024,
-    });
+fn get_ai_model_from_env() -> Option<String> {
+    let model_name = env::var("NYOTA_DEFAULT_AI_MODEL").ok();
+    return model_name;
 }
 
-// async fn send_test_request(model: Model) {
-//     let req = json!({
-//         "model":"gpt-4o-mini",
-//         "messages": [{ "role": "user", "content": "Say this is a test" }],
-//         "store": true,
-//         "stream": false,
-//     });
-//     let client = Client::new();
-
-//     let resp: Response = client
-//         .post(url)
-//         .header("Content-Type", "application/json")
-//         .header("Authorization", format!("Bearer {}", api_key))
-//         .json(&req)
-//         .send()
-//         .await
-//         .unwrap();
-
-//     let resp_text = resp.text().await.unwrap();
-
-//     if resp.status().is_success() {
-//         println!("{:?}", resp);
-//         let json_resp = resp.json().await.unwrap();
-
-//         let json_resp: Value = resp.json().await.unwrap();
-//         println!("{:?}", json_resp);
-//         if let Some(first_choice) = json_resp["choices"].get(0) {
-//             //if this arr has content at 0h index
-//             if let Some(content) = first_choice["message"]["content"].as_str() {
-//                 //if content has key "message"
-//                 println!("Message: {}", content); //print
-//             }
-//         }
-
-//         let zero_val = match json_resp["choices"].get(0) {
-//             //if this arr has content at 0h index
-//             Some(val) => val,
-//             None => &json!({
-//                    "e":"e"}),
-//         };
-
-//         let message = match zero_val["message"]["content"].as_str() {
-//             Some(val) => val,
-//             None => "No message",
-//         };
-//         println!("Message: {}", message); //print
-//     } else {
-//         let err = resp.text().await.unwrap();
-//         eprintln!("Error body: {}", err);
-//     }
-// }
-pub async fn parse_response(model: Model) {
+pub async fn parse_response(model: ApiProvider) {
     match model {
-        Model::OPENAI => {
+        ApiProvider::OPENAI => {
             parse_openai_response().await;
         }
-        Model::ANTHROPIC => {
+        ApiProvider::ANTHROPIC => {
             parse_anthropic_response().await;
         }
-        //        Model::OLLAMA => {
-        //            parse_ollama_response();
-        //        }
-        Model::OPENROUTER => {
+        ApiProvider::OLLAMA => {
+            parse_ollama_response().await;
+        }
+        ApiProvider::OPENROUTER => {
             parse_openrouter_response().await;
         }
     }
 }
 
-pub async fn parse_openai_response() {
-    // Implement the async logic for OpenAI response parsing
+async fn parse_openai_response() {
     let url = OPENAI_API_URL;
-    let api_key = get_api_key(Model::OPENAI).unwrap();
+    let api_key = get_api_key_from_env(&ApiProvider::OPENAI)
+        .expect("Make sure your environmental variables are exposed");
     let req = json!({
         "model": "gpt-4o-mini",
         "messages": [{ "role": "user", "content": "Say this is a test" }],
@@ -172,9 +141,10 @@ pub async fn parse_openai_response() {
     }
 }
 
-pub async fn parse_anthropic_response() {
+async fn parse_anthropic_response() {
     let url = ANTHROPIC_API_URL;
-    let api_key = get_api_key(Model::ANTHROPIC).unwrap();
+    let api_key = get_api_key_from_env(&ApiProvider::ANTHROPIC)
+        .expect("Make sure your environmental variables are exposed");
     let req = json!({
         "model": "claude-3-5-sonnet-20241022",
         "max_tokens": 1024,
@@ -208,56 +178,34 @@ pub async fn parse_anthropic_response() {
     }
 }
 
-fn parse_ollama_response() {
+async fn parse_ollama_response() {
     todo!("Implement Ollama Response Parsing")
 }
 
 async fn parse_openrouter_response() {
-    // Implement the async logic for OpenRouter response parsing
+    let url = OPENROUTER_API_URL;
+    let api_key = get_api_key_from_env(&ApiProvider::OPENROUTER)
+        .expect("Make sure your environmental variables are loaded correctly.");
+    let req = json!({
+        "model": "openai/gpt-4o",
+        "messages": [
+            {"role":"system", "content": "You are a helpful assistant."},
+            {"role":"user", "content": "Hello"}
+        ]
+    });
+
+    let client = Client::new();
+
+    let resp: Response = client
+        .post(url)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&req)
+        .send()
+        .await
+        .unwrap();
+
+    println!("Raw Open Router Response {:?}", resp);
+    //Partial Parsing Completed
+    todo!("Implement OpenRouter Parsing!")
 }
-
-//match
-//  let url = constants::api::OPENAI_API_URL;
-//  let req = json!({
-//      "model":"gpt-4o-mini",
-//      "messages": [{ "role": "user", "content": "Say this is a test" }],
-//      "store": true,
-//      "stream": false,
-//  });
-//  let client  = Client::new();
-
-//  let resp:Response = client.post(url).header("Content-Type", "application/json")
-//         .header("Authorization", format!("Bearer {}", api_key))
-//         .json(&req)
-//         .send()
-//         .await.unwrap();
-// // let resp_text = resp.text().await.unwrap();
-
-//  if resp.status().is_success(){
-//     //println!("{:?}", resp);
-//     // let json_resp = resp.json().await.unwrap();
-
-//      let json_resp: Value = resp.json().await.unwrap();
-//      // println!("{:?}", json_resp);
-//      // if let Some(first_choice) = json_resp["choices"].get(0) { //if this arr has content at 0h index
-//      //     if let Some(content) = first_choice["message"]["content"].as_str() { //if content has key "message"
-//      //         println!("Message: {}", content); //print
-//      //     }
-//      // }
-//      //
-//      let zero_val = match json_resp["choices"].get(0){  //if this arr has content at 0h index
-//          Some(val) => val,
-//          None=> &json!({
-//              "e":"e"})
-//      };
-
-//      let message = match zero_val["message"]["content"].as_str(){
-//          Some(val) => val,
-//          None=> "No message"
-//      };
-//      println!("Message: {}", message); //print
-//  } else{
-//      let err = resp.text().await.unwrap();
-//      eprintln!("Error body: {}", err);
-
-//  }
