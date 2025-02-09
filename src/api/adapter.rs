@@ -1,74 +1,79 @@
 use crate::api::constants::*;
 use anyhow::{Error, Result};
+use reqwest::{Client, Response};
+use serde_json::{json, Value};
 use std::{
     collections::HashMap,
     env::{self, VarError},
 };
 
-use once_cell::sync::Lazy;
-use reqwest::{Client, Response};
-use serde_json::{json, Value};
-
-static MODEL_PROVIDERS: Lazy<HashMap<&str, ApiProvider>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert("gpt-3.5-turbo", ApiProvider::OPENAI);
-    m.insert("gpt-4", ApiProvider::OPENAI);
-    m.insert("claude-v1", ApiProvider::ANTHROPIC);
-    m.insert("ollama", ApiProvider::OLLAMA);
-
-    m
-});
-
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApiProvider {
     OPENAI,
     ANTHROPIC,
     OLLAMA,
     OPENROUTER,
 }
-
-impl Default for ApiProvider {
-    fn default() -> Self {
-        ApiProvider::OPENAI
-    }
-}
-
 // Adapter will act as an instance which tracks global state
 #[derive(Debug)]
 pub struct Adapter {
-    current_api_provider: ApiProvider,
-    active_api_key: String,
-    selected_model: String,
+    api_keys: HashMap<ApiProvider, String>,
+    current_provider: ApiProvider,
+    current_model: String,
 }
 
 impl Adapter {
-    const DEFAULT_MODEL: &'static str = "gpt-4o-mini";
-    const SUPPORTED_MODELS: &'static [&'static str] =
-        &["gpt-4o-mini", "gpt-4o", "claude-3", "ollama", "openrouter"];
-
     pub fn new() -> Self {
-        let ai_model = get_ai_model_from_env().unwrap_or_else(|_| Adapter::set_default_ai_model());
-        let api_provider = get_api_provider_from_model(&ai_model).unwrap_or_default();
-        let api_key = get_api_key_from_env(&api_provider).unwrap_or_else(|_| String::from(""));
+        // Get All API Keys from Environment
+        let mut api_keys = HashMap::new();
+        for provider in SUPPORTED_PROVIDERS.iter() {
+            match get_api_key_from_env(provider) {
+                Ok(api_key) => {
+                    api_keys.insert(*provider, api_key);
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                }
+            }
+        }
+
+        // Get Default AI Model from Environment
+        // If not found, use the default model
+        let current_model = match get_ai_model_from_env() {
+            Ok(current_model) => current_model,
+            Err(e) => {
+                eprintln!("{:?}", e);
+                println!(
+                    "🟡[ADAPTER] 🧩 Warning: Using Default Model - `{}`",
+                    DEFAULT_MODEL
+                );
+                String::from(DEFAULT_MODEL)
+            }
+        };
+
+        // Get the API Provider from the Specified Model
+        // If not found, use the default provider
+        let current_provider = match get_api_provider_from_model(&current_model) {
+            Ok(provider) => *provider,
+            Err(e) => {
+                eprintln!("{:?}", e);
+                println!(
+                    "🟡[ADAPTER] 🧩 Warning: Using Default Provider {:#?}",
+                    DEFAULT_PROVIDER
+                );
+                DEFAULT_PROVIDER
+            }
+        };
 
         Self {
-            selected_model: ai_model,
-            current_api_provider: *api_provider,
-            active_api_key: api_key,
+            api_keys,
+            current_provider,
+            current_model,
         }
-    }
-
-    fn set_default_ai_model() -> String {
-        println!("🟢[ADAPTER] No AI Model set from env...");
-        println!(
-            "🟢[ADAPTER] Using Default Model: {}",
-            Adapter::DEFAULT_MODEL
-        );
-        return String::from(Adapter::DEFAULT_MODEL);
     }
 }
 
-fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, VarError> {
+fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error> {
     let api_name = match selected_provider {
         ApiProvider::OPENAI => env::var("OPENAI_API_KEY"),
         ApiProvider::ANTHROPIC => env::var("ANTHROPIC_API_KEY"),
@@ -79,42 +84,75 @@ fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, VarEr
     };
 
     match api_name {
-        Ok(ref _val) => println!("🟢[ENV] {:?} | API Key Loaded.", selected_provider),
-        Err(VarError::NotPresent) => {
-            eprintln!(
-                "🟢[ENV] Error: {:?} | API Key undetected.",
+        Ok(val) if val.is_empty() => {
+            return Err(Error::msg(format!(
+                "🟡[ENV] 🚫🔑 Warning:  {:?} | API Key is empty.",
                 selected_provider
-            )
+            )));
+        }
+        Ok(val) => {
+            println!(
+                "🟢[ENV] ✅🔑 Success: {:?} | API Key Loaded.",
+                selected_provider
+            );
+            Ok(val)
+        }
+        Err(VarError::NotPresent) => {
+            return Err(Error::msg(format!(
+                "🟡[ENV] 🔍🔑 Warning: {:?} | API Key undetected.",
+                selected_provider,
+            )));
         }
         Err(VarError::NotUnicode(_)) => {
-            println!(
-                "🟢[ENV] Error: {:?} | API Key unreadable.",
+            return Err(Error::msg(format!(
+                "🟡[ENV] 🔍🔑 Warning: {:?} | API Key unreadable.",
                 selected_provider
-            )
+            )));
         }
     }
-
-    return api_name;
 }
 
 fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
-    MODEL_PROVIDERS
-        .get(model_name)
-        .ok_or_else(|| Error::msg("[ADAPTER] Invalid/Unknown API Provider | Model Unsupported!"))
+    SUPPORTED_MODELS.get(model_name).ok_or_else(|| {
+        Error::msg(format!(
+            "🟡[ADAPTER] 💔 Warning: Invalid/Unknown Model | `{}` API Provider Unsupported!",
+            model_name
+        ))
+    })
 }
 
-fn get_ai_model_from_env() -> Result<String, VarError> {
+fn get_ai_model_from_env() -> Result<String, Error> {
     let model_name = env::var("NYOTA_DEFAULT_AI_MODEL");
     match model_name {
-        Ok(ref val) => println!("🟢[ENV] Default AI Model Set from environment: {}", val),
+        Ok(val) if val.is_empty() => {
+            return Err(Error::msg(
+                "🟡[ENV] 🚫🔩 Warning: Default AI Model was not set.",
+            ));
+        }
+        Ok(val) if !SUPPORTED_MODELS.contains_key(val.as_str()) => {
+            return Err(Error::msg(format!(
+                "🟡[ENV] 💔🔩 Warning: Specified Default AI Model {:#?} is not supported.",
+                val
+            )));
+        }
+        Ok(val) => {
+            println!(
+                "🟢[ENV] ⚙️🔩 Success: Default AI Model Set from environment: {}",
+                val
+            );
+            return Ok(val);
+        }
         Err(VarError::NotPresent) => {
-            eprintln!("🟢[ENV] Error: {:?} AI Model undetected.", model_name)
+            return Err(Error::msg(
+                "🟡[ENV] 🔍🔩 Warning: Default AI Model undetected.",
+            ));
         }
         Err(VarError::NotUnicode(_)) => {
-            eprintln!("🟢[ENV] Error: {:?} AI Model unreadable.", model_name)
+            return Err(Error::msg(
+                "🟡[ENV] 🔍🔩 Warning: Default AI Model unreadable",
+            ));
         }
     };
-    return model_name;
 }
 
 async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Value {
@@ -150,7 +188,7 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
     return req;
 }
 
-pub async fn send_request(request: &Value, provider: &ApiProvider) -> () {
+pub async fn send_request(request: &Value, provider: &ApiProvider) -> Response {
     let client = Client::new();
     let resp: Response;
     match provider {
@@ -170,50 +208,62 @@ pub async fn send_request(request: &Value, provider: &ApiProvider) -> () {
                 .await
                 .unwrap();
         }
-        ApiProvider::ANTHROPIC => {}
-        ApiProvider::OLLAMA => {}
-        ApiProvider::OPENROUTER => {}
-    }
-}
-
-pub async fn parse_response(model: ApiProvider) {
-    match model {
-        ApiProvider::OPENAI => {
-            parse_openai_response().await;
-        }
         ApiProvider::ANTHROPIC => {
-            parse_anthropic_response().await;
+            resp = client
+                .post(ANTHROPIC_API_URL)
+                .header(
+                    "x-api-key",
+                    get_api_key_from_env(&ApiProvider::ANTHROPIC).unwrap(),
+                )
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json")
+                .json(&request)
+                .send()
+                .await
+                .unwrap();
         }
         ApiProvider::OLLAMA => {
-            parse_ollama_response().await;
+            todo!("API Provider Ollama - Send Request - To Be Implemented")
         }
         ApiProvider::OPENROUTER => {
-            parse_openrouter_response().await;
+            resp = client
+                .post(OPENROUTER_API_URL)
+                .header("Content-Type", "application/json")
+                .header(
+                    "Authorization",
+                    format!(
+                        "Bearer {}",
+                        get_api_key_from_env(&ApiProvider::OPENROUTER).unwrap()
+                    ),
+                )
+                .json(&request)
+                .send()
+                .await
+                .unwrap();
+        }
+    }
+    return resp;
+}
+
+pub async fn parse_response(model: ApiProvider, api_response: Response) {
+    match model {
+        ApiProvider::OPENAI => {
+            parse_openai_response(api_response).await;
+        }
+        ApiProvider::ANTHROPIC => {
+            parse_anthropic_response(api_response).await;
+        }
+        ApiProvider::OLLAMA => {
+            parse_ollama_response(api_response).await;
+        }
+        ApiProvider::OPENROUTER => {
+            parse_openrouter_response(api_response).await;
         }
     }
 }
 
-async fn parse_openai_response() {
-    let url = OPENAI_API_URL;
-    let api_key = get_api_key_from_env(&ApiProvider::OPENAI)
-        .expect("Make sure your environmental variables are exposed");
-    let req = json!({
-        "model": "gpt-4o-mini",
-       "store": true,
-        "stream": false,
-    });
-
-    let client = Client::new();
-
-    let resp: Response = client
-        .post(url)
-        .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&req)
-        .send()
-        .await
-        .unwrap();
-
+async fn parse_openai_response(api_response: Response) -> () {
+    let resp = api_response;
     if resp.status().is_success() {
         let json_resp: Value = resp.json().await.unwrap();
         if let Some(first_choice) = json_resp["choices"].get(0) {
@@ -227,30 +277,8 @@ async fn parse_openai_response() {
     }
 }
 
-async fn parse_anthropic_response() {
-    let url = ANTHROPIC_API_URL;
-    let api_key = get_api_key_from_env(&ApiProvider::ANTHROPIC)
-        .expect("Make sure your environmental variables are exposed");
-    let req = json!({
-        "model": "claude-3-5-sonnet-20241022",
-        "max_tokens": 1024,
-        "messages": [
-        {"role": "user", "content": "Hello, world"}
-        ]
-    });
-
-    let client = Client::new();
-
-    let resp: Response = client
-        .post(url)
-        .header("x-api-key", api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&req)
-        .send()
-        .await
-        .unwrap();
-
+async fn parse_anthropic_response(api_response: Response) -> () {
+    let resp = api_response;
     if resp.status().is_success() {
         let json_resp: Value = resp.json().await.unwrap();
         if let Some(content) = json_resp["content"].get(0) {
@@ -264,34 +292,12 @@ async fn parse_anthropic_response() {
     }
 }
 
-async fn parse_ollama_response() {
+async fn parse_ollama_response(api_response: Response) -> Result<()> {
+    println!("Raw Open Router Response {:?}", api_response);
     todo!("Implement Ollama Response Parsing")
 }
 
-async fn parse_openrouter_response() {
-    let url = OPENROUTER_API_URL;
-    let api_key = get_api_key_from_env(&ApiProvider::OPENROUTER)
-        .expect("Make sure your environmental variables are loaded correctly.");
-    let req = json!({
-        "model": "openai/gpt-4o",
-        "messages": [
-            {"role":"system", "content": "You are a helpful assistant."},
-            {"role":"user", "content": "Hello"}
-        ]
-    });
-
-    let client = Client::new();
-
-    let resp: Response = client
-        .post(url)
-        .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&req)
-        .send()
-        .await
-        .unwrap();
-
-    println!("Raw Open Router Response {:?}", resp);
-    //Partial Parsing Completed
+async fn parse_openrouter_response(api_response: Response) -> Result<()> {
+    println!("Raw Open Router Response {:?}", api_response);
     todo!("Implement OpenRouter Parsing!")
 }
