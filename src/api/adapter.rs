@@ -5,8 +5,19 @@ use std::{
     env::{self, VarError},
 };
 
+use once_cell::sync::Lazy;
 use reqwest::{Client, Response};
 use serde_json::{json, Value};
+
+static MODEL_PROVIDERS: Lazy<HashMap<&str, ApiProvider>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+    m.insert("gpt-3.5-turbo", ApiProvider::OPENAI);
+    m.insert("gpt-4", ApiProvider::OPENAI);
+    m.insert("claude-v1", ApiProvider::ANTHROPIC);
+    m.insert("ollama", ApiProvider::OLLAMA);
+
+    m
+});
 
 #[derive(Debug)]
 pub enum ApiProvider {
@@ -42,7 +53,7 @@ impl Adapter {
 
         Self {
             selected_model: ai_model,
-            current_api_provider: api_provider,
+            current_api_provider: *api_provider,
             active_api_key: api_key,
         }
     }
@@ -86,20 +97,10 @@ fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, VarEr
     return api_name;
 }
 
-fn get_api_provider_from_model(model_name: &String) -> Result<ApiProvider, Error> {
-    // Rewrite this to use Supported Models and handle dynamically
-
-    match model_name.as_str() {
-        "gpt-4" => Ok(ApiProvider::OPENAI),
-        "gpt-4o" => Ok(ApiProvider::OPENAI),
-        "gpt-4o-mini" => Ok(ApiProvider::OPENAI),
-        "sonnet" => Ok(ApiProvider::ANTHROPIC),
-        "ollama" => {
-            todo!("Implement Ollama Support")
-        }
-        "openrouter" => Ok(ApiProvider::OPENROUTER),
-        _ => Err(Error::msg("[ADAPTER] Invalid default AI model")),
-    }
+fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
+    MODEL_PROVIDERS
+        .get(model_name)
+        .ok_or_else(|| Error::msg("[ADAPTER] Invalid/Unknown API Provider | Model Unsupported!"))
 }
 
 fn get_ai_model_from_env() -> Result<String, VarError> {
