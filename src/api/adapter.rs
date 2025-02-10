@@ -53,7 +53,7 @@ impl Adapter {
 
         // Get the API Provider from the Specified Model
         // If not found, use the default provider
-        let current_provider = match get_api_provider_from_model(&current_model) {
+        let current_provider = match Self::get_api_provider_from_model(&current_model) {
             Ok(provider) => *provider,
             Err(e) => {
                 eprintln!("{:?}", e);
@@ -70,6 +70,91 @@ impl Adapter {
             current_provider,
             current_model,
         }
+    }
+
+    pub fn get_current_provider(&self) -> ApiProvider {
+        self.current_provider
+    }
+
+    pub fn get_current_model(&self) -> &str {
+        &self.current_model
+    }
+
+    pub fn get_api_key(&self, provider: &ApiProvider) -> Option<&String> {
+        self.api_keys.get(provider)
+    }
+
+    pub fn set_current_provider(&mut self, provider: ApiProvider) {
+        // add validation for provider
+        self.current_provider = provider;
+    }
+
+    pub fn set_current_model(&mut self, model: String) {
+        // add validation for model
+        self.current_model = model;
+    }
+
+    pub fn set_api_key(&mut self, provider: ApiProvider, key: String) {
+        // add validation for api key (HOW?)
+        self.api_keys.insert(provider, key);
+    }
+
+    fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
+        SUPPORTED_MODELS.get(model_name).ok_or_else(|| {
+            Error::msg(format!(
+                "🟡[ADAPTER] 💔 Warning: Invalid/Unknown Model | `{}` API Provider Unsupported!",
+                model_name
+            ))
+        })
+    }
+
+    pub async fn send_test_request(&self, msg: &str) -> Result<()> {
+        println!(
+            "🟢[ADAPTER] 🚀📡 Sending Test Request to API Provider {:#?}...",
+            self.current_provider
+        );
+        let request = formulate_request(self.current_provider, &self.current_model, msg).await;
+        let response = self.send_request(&request, &self.current_provider).await?;
+        println!("{}", parse_response(self.current_provider, response).await?);
+        Ok(())
+    }
+
+    pub async fn send_request(
+        &self,
+        request: &Value,
+        provider: &ApiProvider,
+    ) -> Result<Response, Error> {
+        let client = Client::new();
+        let submission = match provider {
+            ApiProvider::OPENAI => client
+                .post(OPENAI_API_URL)
+                .header("Content-Type", "application/json")
+                .header(
+                    "Authorization",
+                    format!("Bearer {}", &self.get_api_key(provider).unwrap()),
+                ),
+            ApiProvider::ANTHROPIC => client
+                .post(ANTHROPIC_API_URL)
+                .header("x-api-key", self.get_api_key(provider).unwrap())
+                .header("anthropic-version", "2023-06-01")
+                .header("content-type", "application/json"),
+            ApiProvider::OLLAMA => {
+                todo!("API Provider Ollama - Send Request - To Be Implemented")
+            }
+            ApiProvider::OPENROUTER => client
+                .post(OPENROUTER_API_URL)
+                .header("Content-Type", "application/json")
+                .header(
+                    "Authorization",
+                    format!("Bearer {}", &self.get_api_key(provider).unwrap()),
+                ),
+        };
+        submission.json(&request).send().await.map_err(|e| {
+            Error::msg(format!(
+                "🔴[ADAPTER] 🚫🔌 Error: Failed to send request to API Provider {:#?} | {:?}",
+                provider, e
+            ))
+        })
     }
 }
 
@@ -110,15 +195,6 @@ fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error
             )));
         }
     }
-}
-
-fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
-    SUPPORTED_MODELS.get(model_name).ok_or_else(|| {
-        Error::msg(format!(
-            "🟡[ADAPTER] 💔 Warning: Invalid/Unknown Model | `{}` API Provider Unsupported!",
-            model_name
-        ))
-    })
 }
 
 fn get_ai_model_from_env() -> Result<String, Error> {
@@ -163,6 +239,10 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
                 "model": model,
                "store": true,
                 "stream": false,
+                "messages": [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": msg}
+                ]
             });
         }
         ApiProvider::ANTHROPIC => {
@@ -245,59 +325,43 @@ pub async fn send_request(request: &Value, provider: &ApiProvider) -> Response {
     return resp;
 }
 
-pub async fn parse_response(model: ApiProvider, api_response: Response) {
-    match model {
-        ApiProvider::OPENAI => {
-            parse_openai_response(api_response).await;
-        }
-        ApiProvider::ANTHROPIC => {
-            parse_anthropic_response(api_response).await;
-        }
-        ApiProvider::OLLAMA => {
-            parse_ollama_response(api_response).await;
-        }
-        ApiProvider::OPENROUTER => {
-            parse_openrouter_response(api_response).await;
-        }
-    }
-}
+pub async fn parse_response(model: ApiProvider, api_response: Response) -> Result<String, Error> {
+    if api_response.status().is_success() {
+        let json: Value = api_response.json().await?;
 
-async fn parse_openai_response(api_response: Response) -> () {
-    let resp = api_response;
-    if resp.status().is_success() {
-        let json_resp: Value = resp.json().await.unwrap();
-        if let Some(first_choice) = json_resp["choices"].get(0) {
-            if let Some(content) = first_choice["message"]["content"].as_str() {
-                println!("Message: {}", content);
-            }
+        match model {
+            ApiProvider::OPENAI => parse_openai_response(json).await,
+            ApiProvider::ANTHROPIC => parse_anthropic_response(json).await,
+            ApiProvider::OLLAMA => parse_ollama_response(json).await,
+            ApiProvider::OPENROUTER => parse_openrouter_response(json).await,
         }
     } else {
-        let err = resp.text().await.unwrap();
-        eprintln!("Error body: {}", err);
+        let error_text = api_response.text().await?;
+        Err(Error::msg(format!("API error: {}", error_text)))
     }
 }
 
-async fn parse_anthropic_response(api_response: Response) -> () {
-    let resp = api_response;
-    if resp.status().is_success() {
-        let json_resp: Value = resp.json().await.unwrap();
-        if let Some(content) = json_resp["content"].get(0) {
-            if let Some(text) = content["text"].as_str() {
-                println!("Message: {}", text);
-            }
-        }
-    } else {
-        let err = resp.text().await.unwrap();
-        eprintln!("Error body: {}", err);
-    }
+async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
+    let content = json_response["choices"][0]["message"]["content"]
+        .as_str()
+        .ok_or_else(|| Error::msg("No content found in response!"))?;
+
+    Ok(String::from(content))
 }
 
-async fn parse_ollama_response(api_response: Response) -> Result<()> {
-    println!("Raw Open Router Response {:?}", api_response);
+async fn parse_anthropic_response(json_response: Value) -> Result<String, Error> {
+    let content = json_response["messages"][0]["text"]
+        .as_str()
+        .ok_or_else(|| Error::msg("No content found in response!"))?;
+    Ok(String::from(content))
+}
+
+async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
+    println!("Raw Open Router Response {:?}", json_response);
     todo!("Implement Ollama Response Parsing")
 }
 
-async fn parse_openrouter_response(api_response: Response) -> Result<()> {
-    println!("Raw Open Router Response {:?}", api_response);
+async fn parse_openrouter_response(json_response: Value) -> Result<String, Error> {
+    println!("Raw Open Router Response {:?}", json_response);
     todo!("Implement OpenRouter Parsing!")
 }

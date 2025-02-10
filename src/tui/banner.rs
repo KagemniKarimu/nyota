@@ -16,7 +16,8 @@ pub fn get_banner() -> String {
 "#;
 
     // Create rainbow effect
-    banner.lines()
+    banner
+        .lines()
         .enumerate()
         .map(|(i, line)| {
             match i % 6 {
@@ -27,15 +28,17 @@ pub fn get_banner() -> String {
                 4 => line.bright_blue(),
                 5 => line.bright_magenta(),
                 _ => line.normal(),
-            }.to_string()
+            }
+            .to_string()
         })
         .collect::<Vec<String>>()
         .join("\n")
 }
 
 pub fn get_version_plaque() -> String {
-    let version = env!("CARGO_PKG_VERSION");  // Gets version from Cargo.toml
-    let plaque = format!(r#"
+    let version = env!("CARGO_PKG_VERSION"); // Gets version from Cargo.toml
+    let plaque = format!(
+        r#"
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
     ┌╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┐
     ╎                                 ╎
@@ -47,7 +50,9 @@ pub fn get_version_plaque() -> String {
     ╎                                 ╎
     └╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶┘
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-"#, version);
+"#,
+        version
+    );
 
     plaque.bright_cyan().to_string()
 }

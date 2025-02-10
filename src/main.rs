@@ -24,6 +24,9 @@ async fn main() -> Result<()> {
     let api_adapter = Adapter::new();
 
     println!("{:?}", api_adapter);
+
+    api_adapter.send_test_request("Say Hi as Nyota!!").await?;
+    // handle_menu().await.unwrap();
     // let mode_input = cli::modes::get_mode_input();
     // match mode_input.mode {
     //    Mode::Development => handle_development(),
