@@ -102,7 +102,10 @@ impl Adapter {
     fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
         if model_name.starts_with("openrouter/") {
             return Ok(&ApiProvider::OPENROUTER);
+        } else if model_name.starts_with("ollama/") {
+            return Ok(&ApiProvider::OLLAMA);
         }
+
         SUPPORTED_MODELS.get(model_name).ok_or_else(|| {
             Error::msg(format!(
                 "🟡[ADAPTER] 💔 Warning: Invalid/Unknown Model | `{}` API Provider Unsupported!",
@@ -144,9 +147,7 @@ impl Adapter {
                 .header("x-api-key", api_key)
                 .header("anthropic-version", "2023-06-01")
                 .header("content-type", "application/json"),
-            ApiProvider::OLLAMA => {
-                todo!("API Provider Ollama - Send Request - To Be Implemented")
-            }
+            ApiProvider::OLLAMA => client.post(OLLAMA_API_URL),
             ApiProvider::OPENROUTER => client
                 .post(OPENROUTER_API_URL)
                 .header("Content-Type", "application/json")
@@ -165,20 +166,21 @@ fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error
     let api_name = match selected_provider {
         ApiProvider::OPENAI => env::var("OPENAI_API_KEY"),
         ApiProvider::ANTHROPIC => env::var("ANTHROPIC_API_KEY"),
-        ApiProvider::OLLAMA => {
-            todo!("Implement Ollama Support")
-        }
+        ApiProvider::OLLAMA => Ok(String::from("")),
         ApiProvider::OPENROUTER => env::var("OPENROUTER_API_KEY"),
     };
 
     match api_name {
-        Ok(val) if val.is_empty() => {
+        Ok(val) if val.is_empty() && selected_provider != &ApiProvider::OLLAMA => {
             return Err(Error::msg(format!(
                 "🟡[ENV] 🚫🔑 Warning:  {:?} | API Key is empty.",
                 selected_provider
             )));
         }
         Ok(val) => {
+            if selected_provider == &ApiProvider::OLLAMA {
+                return Ok(val);
+            }
             println!(
                 "🟢[ENV] ✅🔑 Success: {:?} | API Key Loaded.",
                 selected_provider
@@ -209,7 +211,9 @@ fn get_ai_model_from_env() -> Result<String, Error> {
             ));
         }
         Ok(val)
-            if !SUPPORTED_MODELS.contains_key(val.as_str()) && !val.starts_with("openrouter/") =>
+            if !SUPPORTED_MODELS.contains_key(val.as_str())
+                && !val.starts_with("openrouter/")
+                && !val.starts_with("ollama/") =>
         {
             return Err(Error::msg(format!(
                 "🟡[ENV] 💔🔩 Warning: Specified Default AI Model {:#?} is not supported.",
@@ -258,7 +262,11 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
             });
         }
         ApiProvider::OLLAMA => {
-            todo!("API Provider - Formulate Request JSON - To Be Implemented")
+            req = json!({
+              "model": model.trim_start_matches("ollama/"),
+              "prompt": msg,
+              "stream": false
+            });
         }
         ApiProvider::OPENROUTER => {
             req = json!({
@@ -271,63 +279,6 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
         }
     }
     return req;
-}
-
-pub async fn send_request(request: &Value, provider: &ApiProvider) -> Response {
-    let client = Client::new();
-    let resp: Response;
-    match provider {
-        ApiProvider::OPENAI => {
-            resp = client
-                .post(OPENAI_API_URL)
-                .header("Content-Type", "application/json")
-                .header(
-                    "Authorization",
-                    format!(
-                        "Bearer {}",
-                        get_api_key_from_env(&ApiProvider::OPENAI).unwrap()
-                    ),
-                )
-                .json(&request)
-                .send()
-                .await
-                .unwrap();
-        }
-        ApiProvider::ANTHROPIC => {
-            resp = client
-                .post(ANTHROPIC_API_URL)
-                .header(
-                    "x-api-key",
-                    get_api_key_from_env(&ApiProvider::ANTHROPIC).unwrap(),
-                )
-                .header("anthropic-version", "2023-06-01")
-                .header("content-type", "application/json")
-                .json(&request)
-                .send()
-                .await
-                .unwrap();
-        }
-        ApiProvider::OLLAMA => {
-            todo!("API Provider Ollama - Send Request - To Be Implemented")
-        }
-        ApiProvider::OPENROUTER => {
-            resp = client
-                .post(OPENROUTER_API_URL)
-                .header("Content-Type", "application/json")
-                .header(
-                    "Authorization",
-                    format!(
-                        "Bearer {}",
-                        get_api_key_from_env(&ApiProvider::OPENROUTER).unwrap()
-                    ),
-                )
-                .json(&request)
-                .send()
-                .await
-                .unwrap();
-        }
-    }
-    return resp;
 }
 
 pub async fn parse_response(model: ApiProvider, api_response: Response) -> Result<String, Error> {
@@ -364,8 +315,11 @@ async fn parse_anthropic_response(json_response: Value) -> Result<String, Error>
 }
 
 async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
-    println!("Raw Open Router Response {:?}", json_response);
-    todo!("Implement Ollama Response Parsing")
+    // DEBUG println!("Raw Ollama Response {:?}", json_response);
+    let content = json_response["response"]
+        .as_str()
+        .ok_or_else(|| Error::msg("No content found in response!"))?;
+    Ok(String::from(content))
 }
 
 async fn parse_openrouter_response(json_response: Value) -> Result<String, Error> {

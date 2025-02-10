@@ -6,15 +6,16 @@ use std::sync::LazyLock;
 pub const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 pub const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 pub const OPENROUTER_API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
+pub const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 
 pub const DEFAULT_PROVIDER: ApiProvider = ApiProvider::OPENAI;
 pub const DEFAULT_MODEL: &'static str = "gpt-4o-mini";
 
-pub const SUPPORTED_PROVIDERS: [ApiProvider; 3] = [
+pub const SUPPORTED_PROVIDERS: [ApiProvider; 4] = [
     ApiProvider::ANTHROPIC,
     ApiProvider::OPENAI,
     ApiProvider::OPENROUTER,
-    //    ApiProvider::OLLAMA,
+    ApiProvider::OLLAMA,
 ];
 
 pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::new(|| {
