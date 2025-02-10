@@ -1,4 +1,4 @@
-use crate::snd::player::*;
+use crate::{api::utilities::Adapter, snd::player::*};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use crossterm::event::{self, Event, KeyCode};
@@ -63,12 +63,14 @@ pub struct ChatInterface<'a> {
     input: TextArea<'a>,
     /// Whether the interface should exit
     should_quit: bool,
+    /// API adapter for sending messages
+    api_adapter: Adapter,
     /// Status information
     status: StatusLine,
 }
 
 impl<'a> ChatInterface<'a> {
-    pub fn new() -> Self {
+    pub async fn new(api_adapter: Adapter) -> Self {
         let mut input = TextArea::default();
         input.set_block(
             Block::default()
@@ -77,16 +79,26 @@ impl<'a> ChatInterface<'a> {
                 .title(" Input "),
         );
 
+        let adapter_default_model = String::from(api_adapter.get_current_model());
+        let connection_status = Self::test_init_status(&api_adapter).await;
         Self {
             messages: Vec::new(),
             input,
             should_quit: false,
+            api_adapter,
             status: StatusLine {
                 mode: InputMode::Normal,
-                connection_status: ConnectionStatus::Connected,
+                connection_status: connection_status,
                 message_count: 0,
-                current_model: "GPT-4".to_string(),
+                current_model: adapter_default_model,
             },
+        }
+    }
+
+    async fn test_init_status(api_adapter: &Adapter) -> ConnectionStatus {
+        match api_adapter.send_test_request("test").await {
+            Ok(_) => ConnectionStatus::Connected,
+            Err(_) => ConnectionStatus::Error,
         }
     }
 
@@ -262,10 +274,13 @@ pub struct ChatManager<'a> {
 }
 
 impl<'a> ChatManager<'a> {
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let default_chat = ChatId("main".to_string());
         let mut chats = HashMap::new();
-        chats.insert(default_chat.clone(), ChatInterface::new());
+        chats.insert(
+            default_chat.clone(),
+            ChatInterface::new(Adapter::new()).await,
+        );
 
         Self {
             chats,
@@ -275,9 +290,10 @@ impl<'a> ChatManager<'a> {
     }
 
     /// Switch to a different chat
-    pub fn switch_chat(&mut self, id: ChatId) {
+    pub async fn switch_chat(&mut self, id: ChatId) {
         if !self.chats.contains_key(&id) {
-            self.chats.insert(id.clone(), ChatInterface::new());
+            self.chats
+                .insert(id.clone(), ChatInterface::new(Adapter::new()).await);
         }
         self.active_chat = id;
     }
