@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
 
     let api_adapter = Adapter::new();
 
-    println!("{:?}", api_adapter);
+    println!("{:?}", api_adapter); // DEBUG
 
     api_adapter.send_test_request("Say Hi as Nyota!!").await?;
     // handle_menu().await.unwrap();

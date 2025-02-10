@@ -1,4 +1,5 @@
 use super::adapter::ApiProvider;
+use reqwest::{Client, Response};
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -18,11 +19,30 @@ pub const SUPPORTED_PROVIDERS: [ApiProvider; 3] = [
 
 pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::new(|| {
     let mut m = HashMap::new();
+    // Load All Supported OpenAI Models
+    m.insert("chatgpt-4o-latest", ApiProvider::OPENAI);
     m.insert("gpt-4o-mini", ApiProvider::OPENAI);
     m.insert("gpt-3.5-turbo", ApiProvider::OPENAI);
     m.insert("gpt-4", ApiProvider::OPENAI);
-    m.insert("claude-v1", ApiProvider::ANTHROPIC);
-    m.insert("ollama", ApiProvider::OLLAMA);
+    m.insert("gpt-4o", ApiProvider::OPENAI);
+    m.insert("gpt-4-turbo", ApiProvider::OPENAI);
+    m.insert("o1", ApiProvider::OPENAI);
+    m.insert("o1-preview", ApiProvider::OPENAI);
+    m.insert("o1-mini", ApiProvider::OPENAI);
+    m.insert("o3-mini", ApiProvider::OPENAI);
+
+    // Load All Supported Anthropic Models
+    m.insert("claude-3-5-sonnet-20241022", ApiProvider::ANTHROPIC);
+    m.insert("claude-3-5-haiku-20241022", ApiProvider::ANTHROPIC);
+    m.insert("claude-3-5-sonnet-20240620", ApiProvider::ANTHROPIC);
+    m.insert("claude-3-haiku-20240307", ApiProvider::ANTHROPIC);
+    m.insert("claude-3-opus-20240229", ApiProvider::ANTHROPIC);
+    m.insert("claude-3-sonnet-20240229", ApiProvider::ANTHROPIC);
+    m.insert("claude-2.1", ApiProvider::ANTHROPIC);
+    m.insert("claude-2.1-sonnet", ApiProvider::ANTHROPIC);
+
+    // Load Ollama Support
+    // m.insert("ollama", ApiProvider::OLLAMA);
 
     m
 });

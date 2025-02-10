@@ -100,6 +100,9 @@ impl Adapter {
     }
 
     fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
+        if model_name.starts_with("openrouter/") {
+            return Ok(&ApiProvider::OPENROUTER);
+        }
         SUPPORTED_MODELS.get(model_name).ok_or_else(|| {
             Error::msg(format!(
                 "🟡[ADAPTER] 💔 Warning: Invalid/Unknown Model | `{}` API Provider Unsupported!",
@@ -125,17 +128,20 @@ impl Adapter {
         provider: &ApiProvider,
     ) -> Result<Response, Error> {
         let client = Client::new();
+        let api_key = self.get_api_key(provider).ok_or_else(|| {
+            Error::msg(format!(
+                "🔴[ADAPTER] Error: No valid API key found for provider {:#?}",
+                provider
+            ))
+        })?;
         let submission = match provider {
             ApiProvider::OPENAI => client
                 .post(OPENAI_API_URL)
                 .header("Content-Type", "application/json")
-                .header(
-                    "Authorization",
-                    format!("Bearer {}", &self.get_api_key(provider).unwrap()),
-                ),
+                .header("Authorization", format!("Bearer {}", api_key)),
             ApiProvider::ANTHROPIC => client
                 .post(ANTHROPIC_API_URL)
-                .header("x-api-key", self.get_api_key(provider).unwrap())
+                .header("x-api-key", api_key)
                 .header("anthropic-version", "2023-06-01")
                 .header("content-type", "application/json"),
             ApiProvider::OLLAMA => {
@@ -144,10 +150,7 @@ impl Adapter {
             ApiProvider::OPENROUTER => client
                 .post(OPENROUTER_API_URL)
                 .header("Content-Type", "application/json")
-                .header(
-                    "Authorization",
-                    format!("Bearer {}", &self.get_api_key(provider).unwrap()),
-                ),
+                .header("Authorization", format!("Bearer {}", api_key)),
         };
         submission.json(&request).send().await.map_err(|e| {
             Error::msg(format!(
@@ -205,7 +208,9 @@ fn get_ai_model_from_env() -> Result<String, Error> {
                 "🟡[ENV] 🚫🔩 Warning: Default AI Model was not set.",
             ));
         }
-        Ok(val) if !SUPPORTED_MODELS.contains_key(val.as_str()) => {
+        Ok(val)
+            if !SUPPORTED_MODELS.contains_key(val.as_str()) && !val.starts_with("openrouter/") =>
+        {
             return Err(Error::msg(format!(
                 "🟡[ENV] 💔🔩 Warning: Specified Default AI Model {:#?} is not supported.",
                 val
@@ -257,7 +262,7 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
         }
         ApiProvider::OPENROUTER => {
             req = json!({
-                "model": model,
+                "model": model.trim_start_matches("openrouter/"),
                 "messages": [
                     {"role":"system", "content": "You are a helpful assistant."},
                     {"role":"user", "content": msg}
@@ -342,6 +347,7 @@ pub async fn parse_response(model: ApiProvider, api_response: Response) -> Resul
 }
 
 async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
+    // DEBUG println!("{:#?}", json_response);
     let content = json_response["choices"][0]["message"]["content"]
         .as_str()
         .ok_or_else(|| Error::msg("No content found in response!"))?;
@@ -350,7 +356,8 @@ async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
 }
 
 async fn parse_anthropic_response(json_response: Value) -> Result<String, Error> {
-    let content = json_response["messages"][0]["text"]
+    // DEBUG println!("{:#?}", json_response);
+    let content = json_response["content"][0]["text"]
         .as_str()
         .ok_or_else(|| Error::msg("No content found in response!"))?;
     Ok(String::from(content))
@@ -362,6 +369,9 @@ async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
 }
 
 async fn parse_openrouter_response(json_response: Value) -> Result<String, Error> {
-    println!("Raw Open Router Response {:?}", json_response);
-    todo!("Implement OpenRouter Parsing!")
+    // DEBUG println!("Raw Open Router Response {:?}", json_response);
+    let content = json_response["choices"][0]["message"]["content"]
+        .as_str()
+        .ok_or_else(|| Error::msg("No content found in response!"))?;
+    Ok(String::from(content))
 }
