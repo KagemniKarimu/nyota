@@ -6,7 +6,7 @@ mod snd;
 mod tui;
 
 use anyhow::Result;
-use api::adapter::*;
+use api::utilities::*;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use snd::player::play_welcome_chirp;
 use std::io::Stdout;

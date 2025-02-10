@@ -1,5 +1,4 @@
-use super::adapter::ApiProvider;
-use reqwest::{Client, Response};
+use super::utilities::ApiProvider;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -41,9 +40,6 @@ pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::ne
     m.insert("claude-3-sonnet-20240229", ApiProvider::ANTHROPIC);
     m.insert("claude-2.1", ApiProvider::ANTHROPIC);
     m.insert("claude-2.1-sonnet", ApiProvider::ANTHROPIC);
-
-    // Load Ollama Support
-    // m.insert("ollama", ApiProvider::OLLAMA);
 
     m
 });
