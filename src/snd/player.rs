@@ -43,7 +43,7 @@ pub fn play_menu_toggle_noise() {
     });
 }
 
-pub fn play_keystroke() {
+pub fn _play_keystroke() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -58,7 +58,7 @@ pub fn play_keystroke() {
     });
 }
 
-pub fn play_keystroke2() {
+pub fn _play_keystroke2() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -73,7 +73,7 @@ pub fn play_keystroke2() {
     });
 }
 
-pub fn play_enter() {
+pub fn _play_enter() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -104,7 +104,7 @@ pub fn play_backspace() {
 }
 
 // Previously using SquareWave for mode changes
-pub fn play_mode_normal() {
+pub fn _play_mode_normal() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -119,7 +119,7 @@ pub fn play_mode_normal() {
     });
 }
 
-pub fn play_mode_insert() {
+pub fn _play_mode_insert() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -149,7 +149,7 @@ pub fn play_message_sent() {
     });
 }
 
-pub fn play_message_received() {
+pub fn _play_message_received() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -165,7 +165,7 @@ pub fn play_message_received() {
     });
 }
 
-pub fn play_error() {
+pub fn _play_error() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
@@ -181,7 +181,7 @@ pub fn play_error() {
 }
 
 // Previously using SquareWave in mix
-pub fn play_connection_change() {
+pub fn _play_connection_change() {
     tokio::spawn(async move {
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();

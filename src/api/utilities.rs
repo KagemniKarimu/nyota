@@ -72,7 +72,7 @@ impl Adapter {
         }
     }
 
-    pub fn get_current_provider(&self) -> ApiProvider {
+    pub fn _get_current_provider(&self) -> ApiProvider {
         self.current_provider
     }
 
@@ -84,17 +84,17 @@ impl Adapter {
         self.api_keys.get(provider)
     }
 
-    pub fn set_current_provider(&mut self, provider: ApiProvider) {
+    pub fn _set_current_provider(&mut self, provider: ApiProvider) {
         // add validation for provider
         self.current_provider = provider;
     }
 
-    pub fn set_current_model(&mut self, model: String) {
+    pub fn _set_current_model(&mut self, model: String) {
         // add validation for model
         self.current_model = model;
     }
 
-    pub fn set_api_key(&mut self, provider: ApiProvider, key: String) {
+    pub fn _set_api_key(&mut self, provider: ApiProvider, key: String) {
         // add validation for api key (HOW?)
         self.api_keys.insert(provider, key);
     }
@@ -115,17 +115,23 @@ impl Adapter {
     }
 
     pub async fn send_test_request(&self, msg: &str) -> Result<()> {
-        println!(
-            "🟢[ADAPTER] 🚀📡 Sending Test Request to API Provider {:#?}...",
-            self.current_provider
-        );
+        // println!(
+        //     "🟢[ADAPTER] 🚀📡 Sending Test Request to API Provider {:#?}...",
+        //     self.current_provider
+        // );
         let request = formulate_request(self.current_provider, &self.current_model, msg).await;
-        let response = self.send_request(&request, &self.current_provider).await?;
-        println!("{}", parse_response(self.current_provider, response).await?);
+        self.send_request(&request, &self.current_provider).await?;
+        // println!("{}", parse_response(self.current_provider, response).await?);
         Ok(())
     }
 
-    pub async fn send_request(
+    pub async fn send_to_llm(&self, msg: &str) -> Result<String> {
+        let request = formulate_request(self.current_provider, &self.current_model, msg).await;
+        let response = self.send_request(&request, &self.current_provider).await?;
+        Ok(parse_response(self.current_provider, response).await?)
+    }
+
+    async fn send_request(
         &self,
         request: &Value,
         provider: &ApiProvider,

@@ -84,7 +84,7 @@ async fn handle_interactive(api_adapter: Adapter) -> Result<()> {
 
     // Create and run chat interface
     let mut chat = ChatInterface::new(api_adapter).await;
-    let result = chat.run(&mut terminal);
+    let result = chat.run(&mut terminal).await;
 
     // Cleanup
     ratatui::restore();

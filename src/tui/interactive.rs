@@ -152,18 +152,18 @@ impl<'a> ChatInterface<'a> {
         ]);
 
         let status_widget = Paragraph::new(status_line)
-            .style(Style::default().bg(Color::DarkGray))
+            .style(Style::default().bg(Color::Black))
             .block(Block::default());
 
         frame.render_widget(status_widget, area);
     }
 
-    fn send_message(&mut self) {
+    async fn submit_message(&mut self) {
         let input_content = self.input.lines().join("\n");
         if !input_content.trim().is_empty() {
             // Add user message
             self.messages.push(Message {
-                content: input_content,
+                content: input_content.to_string(),
                 timestamp: Utc::now(),
                 is_user: true,
             });
@@ -178,8 +178,14 @@ impl<'a> ChatInterface<'a> {
             // TODO: Here you would typically send the message to the AI
             // and add its response
             // For now, let's just add a mock response
+
+            let llm_talk = match self.api_adapter.send_to_llm(&input_content).await {
+                Ok(response) => response,
+                Err(e) => format!("{}", e),
+            };
+
             self.messages.push(Message {
-                content: "This is a mock response.".to_string(),
+                content: llm_talk,
                 timestamp: Utc::now(),
                 is_user: false,
             });
@@ -223,13 +229,13 @@ impl<'a> ChatInterface<'a> {
         frame.render_widget(messages_paragraph, message_area);
 
         // Render input area
-        frame.render_widget(self.input.widget(), input_area);
+        frame.render_widget(&self.input, input_area);
 
         // Render status line
         self.render_status_line(frame, status_area);
     }
 
-    pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    pub async fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
         loop {
             terminal.draw(|frame| {
                 self.render(frame, frame.area());
@@ -245,7 +251,7 @@ impl<'a> ChatInterface<'a> {
                             play_backspace();
                         }
                         play_message_sent(); // Play sound when sending message
-                        self.send_message();
+                        self.submit_message().await;
                         // Handle message sending
                     }
                     KeyCode::Backspace => {
@@ -264,7 +270,7 @@ impl<'a> ChatInterface<'a> {
 }
 
 /// Manages multiple chat interfaces
-pub struct ChatManager<'a> {
+pub struct _ChatManager<'a> {
     /// All active chat sessions
     chats: HashMap<ChatId, ChatInterface<'a>>,
     /// Currently focused chat
@@ -273,8 +279,8 @@ pub struct ChatManager<'a> {
     mode: InputMode,
 }
 
-impl<'a> ChatManager<'a> {
-    pub async fn new() -> Self {
+impl<'a> _ChatManager<'a> {
+    pub async fn _new() -> Self {
         let default_chat = ChatId("main".to_string());
         let mut chats = HashMap::new();
         chats.insert(
@@ -290,7 +296,7 @@ impl<'a> ChatManager<'a> {
     }
 
     /// Switch to a different chat
-    pub async fn switch_chat(&mut self, id: ChatId) {
+    pub async fn _switch_chat(&mut self, id: ChatId) {
         if !self.chats.contains_key(&id) {
             self.chats
                 .insert(id.clone(), ChatInterface::new(Adapter::new()).await);
@@ -299,7 +305,7 @@ impl<'a> ChatManager<'a> {
     }
 
     /// Get the current active chat
-    pub fn current_chat(&mut self) -> &mut ChatInterface<'a> {
+    pub fn _current_chat(&mut self) -> &mut ChatInterface<'a> {
         self.chats
             .get_mut(&self.active_chat)
             .expect("Active chat should always exist")
