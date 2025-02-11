@@ -1,3 +1,6 @@
+//! # API Utilities
+//! This module contains api utilities for interfacing with various AI API providers.
+
 use crate::api::constants::*;
 use anyhow::{Error, Result};
 use reqwest::{Client, Response};
@@ -7,6 +10,8 @@ use std::{
     env::{self, VarError},
 };
 
+/// ApiProvider is an enum that represents the various AI API providers supported by Nyota.
+/// Each variant corresponds to a specific API provider. However, some models may work with multiple providers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApiProvider {
     OPENAI,
@@ -14,7 +19,8 @@ pub enum ApiProvider {
     OLLAMA,
     OPENROUTER,
 }
-// Adapter will act as an instance which tracks global state
+/// Adapter acts as an interface which tracks global API state and retains API keys gathered from the environmental variables.
+/// The intended use is to have a single instance of Adapter per chat session.  This allows for easy switching between API providers and models
 #[derive(Debug)]
 pub struct Adapter {
     api_keys: HashMap<ApiProvider, String>,
@@ -23,6 +29,10 @@ pub struct Adapter {
 }
 
 impl Adapter {
+    /// Creates a new instance of Adapter.
+    /// The Adapter is initialized with API keys from the environment variables.
+    /// If no model is specified, the DEFAULT_MODEL is used.
+    /// If no provider is specified, the DEFAULT_PROVIDER is used.
     pub fn new() -> Self {
         // Get All API Keys from Environment
         let mut api_keys = HashMap::new();
@@ -72,33 +82,40 @@ impl Adapter {
         }
     }
 
+    /// Returns the current API provider as an ApiProvider enum variant.
     pub fn _get_current_provider(&self) -> ApiProvider {
         self.current_provider
     }
 
+    /// Returns the current AI model as a string slice.
     pub fn get_current_model(&self) -> &str {
         &self.current_model
     }
 
+    /// Returns the API key for the specified ApiProvider enum variant.
     pub fn get_api_key(&self, provider: &ApiProvider) -> Option<&String> {
         self.api_keys.get(provider)
     }
 
+    /// Sets the current API provider from an ApiProvider enum variant.
     pub fn _set_current_provider(&mut self, provider: ApiProvider) {
         // add validation for provider
         self.current_provider = provider;
     }
 
+    /// Sets the current AI model using a string as input.
     pub fn _set_current_model(&mut self, model: String) {
         // add validation for model
         self.current_model = model;
     }
 
+    /// Sets the API key (via String) for the specified ApiProvider enum variant.
     pub fn _set_api_key(&mut self, provider: ApiProvider, key: String) {
         // add validation for api key (HOW?)
         self.api_keys.insert(provider, key);
     }
 
+    /// Returns an API Provider enum variant or an Error from the specified model name.
     fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
         if model_name.starts_with("openrouter/") {
             return Ok(&ApiProvider::OPENROUTER);
@@ -114,6 +131,7 @@ impl Adapter {
         })
     }
 
+    /// Sends a test request to the current API provider using the Adapter's current AI model.
     pub async fn send_test_request(&self, msg: &str) -> Result<()> {
         // println!(
         //     "🟢[ADAPTER] 🚀📡 Sending Test Request to API Provider {:#?}...",
@@ -125,12 +143,15 @@ impl Adapter {
         Ok(())
     }
 
+    /// Sends a message as a string slice to the current API provider using the Adapter's current AI model.
+    /// Returns the response from the API provider as a string.
     pub async fn send_to_llm(&self, msg: &str) -> Result<String> {
         let request = formulate_request(self.current_provider, &self.current_model, msg).await;
         let response = self.send_request(&request, &self.current_provider).await?;
         Ok(parse_response(self.current_provider, response).await?)
     }
 
+    /// Sends a request to the specified API provider using the JSON Value type from Serde.
     async fn send_request(
         &self,
         request: &Value,
@@ -168,6 +189,7 @@ impl Adapter {
     }
 }
 
+/// Retrieves the API key from the environment variables for the specified ApiProvider enum variant.
 fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error> {
     let api_name = match selected_provider {
         ApiProvider::OPENAI => env::var("OPENAI_API_KEY"),
@@ -208,6 +230,9 @@ fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error
     }
 }
 
+/// Retrieves the default AI model from the environment variables.
+/// Set from the NYOTA_DEFAULT_AI_MODEL environment variable.
+/// If not set, an error is returned.
 fn get_ai_model_from_env() -> Result<String, Error> {
     let model_name = env::var("NYOTA_DEFAULT_AI_MODEL");
     match model_name {
@@ -246,6 +271,7 @@ fn get_ai_model_from_env() -> Result<String, Error> {
     };
 }
 
+/// Formulates a JSON Value Serde type to be sent to the specified API provider.
 async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Value {
     let req: Value;
     match provider {
@@ -287,6 +313,8 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
     return req;
 }
 
+/// Public interface for parsing a response from the API provider and returning the relevant content as a string.
+/// Parses a response from the API provider and returns the relevant content as a string.
 pub async fn parse_response(model: ApiProvider, api_response: Response) -> Result<String, Error> {
     if api_response.status().is_success() {
         let json: Value = api_response.json().await?;
@@ -303,6 +331,7 @@ pub async fn parse_response(model: ApiProvider, api_response: Response) -> Resul
     }
 }
 
+/// Parses a response from OpenAI and returns the relevant content as a string.
 async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("{:#?}", json_response);
     let content = json_response["choices"][0]["message"]["content"]
@@ -312,6 +341,7 @@ async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
     Ok(String::from(content))
 }
 
+/// Parses a response from Anthropic and returns the relevant content as a string.
 async fn parse_anthropic_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("{:#?}", json_response);
     let content = json_response["content"][0]["text"]
@@ -320,6 +350,7 @@ async fn parse_anthropic_response(json_response: Value) -> Result<String, Error>
     Ok(String::from(content))
 }
 
+/// Parses a response from Ollama and returns the relevant content as a string.
 async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("Raw Ollama Response {:?}", json_response);
     let content = json_response["response"]
@@ -328,6 +359,7 @@ async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
     Ok(String::from(content))
 }
 
+/// Parses a response from OpenRouter and returns the relevant content as a string.
 async fn parse_openrouter_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("Raw Open Router Response {:?}", json_response);
     let content = json_response["choices"][0]["message"]["content"]
