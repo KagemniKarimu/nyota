@@ -85,6 +85,7 @@ TO STUDY STUFF:
 - Memory Management / Long-Context
 - Price Reduction on Calls to LLM APIs
 - Study Deep Research Repo (https://github.com/dzhng/deep-research)
+- Possible action schemas and references from other repos
 
 FUTURE IDEAS:
 - encrypted-at-rest private key storage guarded by pass phrase for wallets created by Nyota
