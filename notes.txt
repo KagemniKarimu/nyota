@@ -68,3 +68,24 @@ The Action Schema will contain the following fields:
 1. query the API: OpenAI rn (do validation and formatting for other API's)
 2. transform natural language command into an action
 3. perform the action -> plugin based, is possible to add new actions
+
+
+
+TODO STUFF:
+- (lex) Lexer / Tokenizer for local parsing of commands , macros, and shortcuts
+- (lex) define common macros / commands
+- (ctx) (db) Context Database is Local Memory of user interactions <Postgresql?> sqlx crate
+- (ctx) (fast_cache) Fast Cache for storing user data (frequent commands, recent interactions, common patterns, quick response) <Redis?>
+- (act) Action Schema (ex. Nyota creates a wallet, Nyota makes a transaction)
+- (act) Native / Modular Plugin System for developing actions USE RUST MACROS FOR CALLING ACTIONS?
+- (tui) add niceties (like tabs, non-blocking ui, token-cost)
+
+TO STUDY STUFF:
+- Redis // FAST CACHING // PERSISTENT CACHING
+- Memory Management / Long-Context
+- Price Reduction on Calls to LLM APIs
+- Study Deep Research Repo (https://github.com/dzhng/deep-research)
+
+FUTURE IDEAS:
+- encrypted-at-rest private key storage guarded by pass phrase for wallets created by Nyota
+- audited registry of plugins which add new actions (on a git repository?)
