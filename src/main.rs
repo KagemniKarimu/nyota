@@ -1,21 +1,15 @@
-// #[macro_use]
-// extern crate dotenv_codegen;
-mod api;
-mod cli;
-mod snd;
-mod tui;
+use nyota::api::utilities::*;
+use nyota::cli::modes::*;
+use nyota::snd::player::*;
+use nyota::tui::banner::*;
+use nyota::tui::interactive::*;
+use nyota::tui::menu::*;
+use nyota::tui::splash::*;
 
 use anyhow::Result;
-use api::utilities::*;
-use cli::modes::Mode;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use snd::player::play_welcome_chirp;
-use std::io::Stdout;
-use std::time::Duration;
+use std::{io::Stdout, time::Duration};
 use tokio::time::sleep;
-use tui::interactive::ChatInterface;
-use tui::menu::MenuAction;
-use tui::{banner::get_banner, banner::get_version_plaque, menu::Menu, splash::SplashScreen};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,7 +19,7 @@ async fn main() -> Result<()> {
     println!("{}", get_version_plaque());
 
     let default_adapter = Adapter::new();
-    let mode_input = cli::modes::get_mode_input();
+    let mode_input = get_mode_input();
     match mode_input.mode {
         Mode::Development => handle_development(default_adapter),
         Mode::Interactive => handle_interactive(default_adapter).await,
