@@ -1522,6 +1522,7 @@ dependencies = [
  "redis",
  "reqwest",
  "rodio",
+ "serde",
  "serde_json",
  "tokio",
  "tokio-macros",
