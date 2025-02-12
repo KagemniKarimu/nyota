@@ -79,6 +79,7 @@ TODO STUFF:
 - (act) Action Schema (ex. Nyota creates a wallet, Nyota makes a transaction)
 - (act) Native / Modular Plugin System for developing actions USE RUST MACROS FOR CALLING ACTIONS?
 - (tui) add niceties (like tabs, non-blocking ui, token-cost)
+- ALSO friendly mascot :)
 
 TO STUDY STUFF:
 - Redis // FAST CACHING // PERSISTENT CACHING

@@ -1,15 +1,24 @@
+//! # API Constants
+//! This module contains constants used in Nyota API calls.
+
 use super::utilities::ApiProvider;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
+// *** API URLs for LLM Providers***
+// used by the Adapter for sending requests
 pub const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 pub const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 pub const OPENROUTER_API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
 pub const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 
+// *** Nyota Default Configuration ***
+// (used if not provided by env)
 pub const DEFAULT_PROVIDER: ApiProvider = ApiProvider::OPENAI;
 pub const DEFAULT_MODEL: &'static str = "gpt-4o-mini";
 
+// ***Supported API Providers ***
+// Note: Some provider configurations may work for unsupported models
 pub const SUPPORTED_PROVIDERS: [ApiProvider; 4] = [
     ApiProvider::ANTHROPIC,
     ApiProvider::OPENAI,
@@ -17,6 +26,8 @@ pub const SUPPORTED_PROVIDERS: [ApiProvider; 4] = [
     ApiProvider::OLLAMA,
 ];
 
+// *** Supported Models (non-exhaustive) ***
+// All ollama & openrouter models are also supported
 pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     // Load All Supported OpenAI Models
