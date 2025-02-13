@@ -20,8 +20,8 @@ impl SplashScreen {
     pub fn new() -> Self {
         Self {
             config: SplashConfig {
-                image_data: include_bytes!("../../logo.png"),
-                sha256sum: Some("a7163048ee584787222302a945a9963492b8721f963b92be6cbf35cb28be5590"), // We can add hash later if needed
+                image_data: include_bytes!("../../logo_with_text_small.png"),
+                sha256sum: Some("5750a49fe90b697f5f2e1be2a522f8eaad92310e9056ce74e5c090bb9d0b42c9"),
                 render_steps: 6,
                 use_colors: true,
             },
