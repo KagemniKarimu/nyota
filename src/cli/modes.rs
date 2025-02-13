@@ -1,17 +1,27 @@
 use clap::{Arg, ArgAction, ArgGroup, Command};
 
+/// The different modes that nyota can be started in.
+/// This is used to determine the behavior of the program.
+/// The mode is set by the user using command-line flags.
+/// If no flags are provided, the default mode is `Menu`.
 #[derive(Debug)]
 pub enum Mode {
+    /// Interactive mode begins the program with a Read-Eval-Print Loop (REPL).
     Interactive,
+    /// Development mode is like interactive mode, but with raw outputs for debugging & development.
     Development,
+    /// Task mode gives users the opportunity to execute a single task and quit upon completion.
     Task,
+    /// Menu mode gives users access to nyota from the main menu. It is the default mode.
     Menu, // default mode
 }
 
+/// The settings for the current mode of nyota.
 pub struct ModeSettings {
     pub mode: Mode,
 }
 
+/// Parses the user input flags to determine the mode to start nyota in. If no flags are provided, the default mode is `Menu`.
 pub fn get_mode_input() -> ModeSettings {
     // Parse User Input Flags
     let flag_input = Command::new("nyota")
