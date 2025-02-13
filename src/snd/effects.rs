@@ -1,14 +1,21 @@
+//! Sound effects for the audio system.
+//! The sound effects are used to provide audio feedback to the user during program execution.
+//! The general pattern is to use `rodio` interfaces to generate chirps and noises.
+//! An enum (`SoundEffects`) is used to represent the different sound effects that can be played.
+//! Variants are defined for each sound effect, and each variant has a corresponding method that creates a `Source` for the effect.
 use rodio::cpal::SampleRate;
 use rodio::source::chirp;
 use rodio::source::{PinkNoise, SineWave, Source};
 use std::time::Duration;
 
 /// The different sound effects that can be played by the audio system.
-/// Each sound effect has a corresponding method that creates a `Source` for the effect.
+/// Each sound effect needs a corresponding method that creates a `Source` for the effect.
 /// The `Source` can be played asynchronously using the `rodio` crate.
 /// The sound effects are used to provide audio feedback to the user during program execution.
 pub enum SoundEffects {
+    /// A welcome chirp sound effect, played when the program starts.
     WelcomeChirp,
+    /// A menu toggle sound effect, played when a menu is toggled.
     MenuToggle,
     Keystroke,
     Keystroke2,

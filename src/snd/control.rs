@@ -1,5 +1,5 @@
-//! Audio control module for Nyota.
-//! This module provides an interface for controlling the audio system in Nyota.
+//! Audio control module for nyota.
+//! This module provides an interface for controlling the audio system in nyota.
 //! It provides functions for playing sound effects and controlling the volume and mute state of the audio system.
 //! The audio system is implemented using the `rodio` crate.
 //! The `AudioControl` struct provides several convenience methods for controlling the audio system.

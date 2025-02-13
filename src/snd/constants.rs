@@ -1,4 +1,4 @@
-//! This module contains default values for the sound system.
+//! Default values for the sound system.
 //! These values are used to initialize the sound system and are used as defaults when the user does not specify any values.
 
 /// Type alias for the sound system's mute state.
