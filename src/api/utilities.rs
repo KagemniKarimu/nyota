@@ -20,7 +20,8 @@ pub enum ApiProvider {
     OPENROUTER,
 }
 /// Adapter acts as an interface which tracks global API state and retains API keys gathered from the environmental variables.
-/// The intended use is to have a single instance of Adapter per chat session.  This allows for easy switching between API providers and models
+/// Even though a default Adapter is provided, it is recommended to create a new instance for each chat session.
+/// The intended use is to have multiple instances of Adapters instanciated.  This allows for easy switching between API providers and models dynamically between simultaneous chat sessions.
 #[derive(Debug)]
 pub struct Adapter {
     api_keys: HashMap<ApiProvider, String>,
@@ -116,6 +117,9 @@ impl Adapter {
     }
 
     /// Returns an API Provider enum variant or an Error from the specified model name.
+    /// If the model name is not found in the supported models list, an error is returned.
+    /// If the model name is found, the corresponding API Provider is returned.
+    /// All models prefixed with "ollama/" or "openrouter/" are default supported.
     fn get_api_provider_from_model(model_name: &str) -> Result<&ApiProvider, Error> {
         if model_name.starts_with("openrouter/") {
             return Ok(&ApiProvider::OPENROUTER);
@@ -190,6 +194,8 @@ impl Adapter {
 }
 
 /// Retrieves the API key from the environment variables for the specified ApiProvider enum variant.
+/// If the API key is empty, undetected, or unreadable, a warning is returned.
+/// In the instance that a provider does not require an API key, an empty string is returned.
 fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error> {
     let api_name = match selected_provider {
         ApiProvider::OPENAI => env::var("OPENAI_API_KEY"),
@@ -314,7 +320,7 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
 }
 
 /// Public interface for parsing a response from the API provider and returning the relevant content as a string.
-/// Parses a response from the API provider and returns the relevant content as a string.
+/// Converts API response to a JSON Value and then parses the response based on the API provider.
 pub async fn parse_response(model: ApiProvider, api_response: Response) -> Result<String, Error> {
     if api_response.status().is_success() {
         let json: Value = api_response.json().await?;
@@ -331,7 +337,7 @@ pub async fn parse_response(model: ApiProvider, api_response: Response) -> Resul
     }
 }
 
-/// Parses a response from OpenAI and returns the relevant content as a string.
+/// Parses a JSON response from OpenAI and returns the relevant content as a string.
 async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("{:#?}", json_response);
     let content = json_response["choices"][0]["message"]["content"]
@@ -341,7 +347,7 @@ async fn parse_openai_response(json_response: Value) -> Result<String, Error> {
     Ok(String::from(content))
 }
 
-/// Parses a response from Anthropic and returns the relevant content as a string.
+/// Parses a JSON response from Anthropic and returns the relevant content as a string.
 async fn parse_anthropic_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("{:#?}", json_response);
     let content = json_response["content"][0]["text"]
@@ -350,7 +356,7 @@ async fn parse_anthropic_response(json_response: Value) -> Result<String, Error>
     Ok(String::from(content))
 }
 
-/// Parses a response from Ollama and returns the relevant content as a string.
+/// Parses a JSON response from Ollama and returns the relevant content as a string.
 async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("Raw Ollama Response {:?}", json_response);
     let content = json_response["response"]
@@ -359,7 +365,7 @@ async fn parse_ollama_response(json_response: Value) -> Result<String, Error> {
     Ok(String::from(content))
 }
 
-/// Parses a response from OpenRouter and returns the relevant content as a string.
+/// Parses a JSON response from OpenRouter and returns the relevant content as a string.
 async fn parse_openrouter_response(json_response: Value) -> Result<String, Error> {
     // DEBUG println!("Raw Open Router Response {:?}", json_response);
     let content = json_response["choices"][0]["message"]["content"]

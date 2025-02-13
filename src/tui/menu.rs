@@ -1,4 +1,4 @@
-use crate::snd::player::play_menu_toggle_noise;
+use crate::snd::control::AudioControl;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{
@@ -155,7 +155,10 @@ impl Menu {
         frame.render_stateful_widget(list, area, &mut self.state);
     }
 
-    pub fn run(&mut self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<MenuAction> {
+    pub async fn run(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> Result<MenuAction> {
         // Application loop
         loop {
             // Draw the current state
@@ -174,12 +177,12 @@ impl Menu {
                         }
                         KeyCode::Down | KeyCode::Char('j') => {
                             // Move selection down
-                            play_menu_toggle_noise();
+                            AudioControl::play_menu_toggle().await?;
                             self.next();
                         }
                         KeyCode::Up | KeyCode::Char('k') => {
                             // Move selection up
-                            play_menu_toggle_noise();
+                            AudioControl::play_menu_toggle().await?;
                             self.previous();
                         }
                         KeyCode::Enter => {

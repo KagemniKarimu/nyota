@@ -1,6 +1,7 @@
 use nyota::api::utilities::*;
 use nyota::cli::modes::*;
-use nyota::snd::player::*;
+use nyota::snd::constants::{DEFAULT_MUTE, DEFAULT_VOLUME};
+use nyota::snd::control::AudioControl;
 use nyota::tui::banner::*;
 use nyota::tui::interactive::*;
 use nyota::tui::menu::*;
@@ -17,6 +18,8 @@ async fn main() -> Result<()> {
 
     println!("{}", get_banner());
     println!("{}", get_version_plaque());
+
+    AudioControl::init(DEFAULT_MUTE, DEFAULT_VOLUME).await?;
 
     let default_adapter = Adapter::new();
     let mode_input = get_mode_input();
@@ -38,7 +41,7 @@ async fn display_main_menu(
     api_adapter: Adapter,
 ) -> Result<MenuAction> {
     let mut menu = Menu::new();
-    match menu.run(terminal)? {
+    match menu.run(terminal).await? {
         MenuAction::Interactive => handle_interactive(api_adapter).await?,
         MenuAction::Task => handle_task(api_adapter)?,
         MenuAction::Development => handle_development(api_adapter)?,
@@ -54,7 +57,7 @@ async fn display_main_menu(
 }
 
 async fn handle_menu(api_adapter: Adapter) -> Result<()> {
-    play_welcome_chirp();
+    AudioControl::play_welcome_chirp().await?;
     sleep(Duration::from_millis(500)).await; // DEBUG - sleep so we can read initialisation messages
 
     // Initialize terminal once

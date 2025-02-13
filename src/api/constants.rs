@@ -14,11 +14,14 @@ pub const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 
 // *** Nyota Default Configuration ***
 // (used if not provided by env)
+/// The default API provider to use if not specified in the environment.
 pub const DEFAULT_PROVIDER: ApiProvider = ApiProvider::OPENAI;
+/// The default AI model to use if not specified in the environment.
 pub const DEFAULT_MODEL: &'static str = "gpt-4o-mini";
 
 // ***Supported API Providers ***
 // Note: Some provider configurations may work for unsupported models
+/// The hardcoded list of supported API providers, used in initialization and validation.
 pub const SUPPORTED_PROVIDERS: [ApiProvider; 4] = [
     ApiProvider::ANTHROPIC,
     ApiProvider::OPENAI,
@@ -28,6 +31,8 @@ pub const SUPPORTED_PROVIDERS: [ApiProvider; 4] = [
 
 // *** Supported Models (non-exhaustive) ***
 // All ollama & openrouter models are also supported
+/// The hardcoded list of supported models, used in initialization and validation.
+/// This list is not exhaustive and may not include all supported models, just those that are statically loaded.
 pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     // Load All Supported OpenAI Models
