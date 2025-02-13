@@ -1,3 +1,8 @@
+//! Interactive chat interface using TUI.
+//! This module provides an interactive chat interface using the features from the `ratatui` crate.
+//! The chat interface allows the user to send messages to an AI model and receive responses.
+//! The chat interface is designed to be interactive and user-friendly.
+
 use crate::{api::utilities::Adapter, snd::control::AudioControl};
 use anyhow::Result;
 use chrono::{DateTime, Utc};

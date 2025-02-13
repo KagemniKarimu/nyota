@@ -1,3 +1,5 @@
+//! A simple menu for the nyota tui
+
 use crate::snd::control::AudioControl;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
