@@ -3,6 +3,10 @@ use rodio::source::chirp;
 use rodio::source::{PinkNoise, SineWave, Source};
 use std::time::Duration;
 
+/// The different sound effects that can be played by the audio system.
+/// Each sound effect has a corresponding method that creates a `Source` for the effect.
+/// The `Source` can be played asynchronously using the `rodio` crate.
+/// The sound effects are used to provide audio feedback to the user during program execution.
 pub enum SoundEffects {
     WelcomeChirp,
     MenuToggle,
@@ -18,7 +22,16 @@ pub enum SoundEffects {
     ConnectionChange,
 }
 
+/// Implementation of the `SoundEffects` enum.
+/// Each variant of the enum has a corresponding method that creates a `Source` for the effect.
 impl SoundEffects {
+    /// Creates a `rodio::source::Source` for the sound effect. The `Source` can be played asynchronously using the `rodio` crate.
+    /// The `Source` generates a waveform that corresponds to the sound effect.
+    /// The waveform is then played through the audio system to provide audio feedback to the user.
+    /// The `Source` is created based on the parameters of the sound effect.
+    /// The `Source` is returned as a boxed trait object to allow for dynamic dispatch.
+    /// The `Source` is also marked as `Send` to allow for asynchronous playback.
+    /// The `Source` is also marked as `'static` to allow for static dispatch.
     pub fn create_source(&self) -> Box<dyn Source<Item = f32> + Send + 'static> {
         match self {
             Self::WelcomeChirp => Box::new(
