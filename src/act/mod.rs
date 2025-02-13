@@ -1,3 +1,19 @@
+//! # Action Module (`nyota::act`)
+//! This module is the action module for `nyota`. This module contains the complete implementation of the action system.
+//! It provides functions for defining, loading, and executing actions.
+//! The action system is used by `nyota` to provide a flexible and extensible interface for executing commands and actions.
+//! It can be used to define custom actions, load actions from external sources, and execute actions based on user input.
+//! The action system is designed to be modular and extensible, allowing users to define their own actions and integrate them into the program.
+//!
+//! ## Implementation Details
+//! TBD
+//!
+//! ## Example
+//! TBD
+//!
+//! ## Modules
+//! TBD
+
 use serde::{Deserialize, Serialize};
 
 // Represents a single parameter for an action
@@ -12,7 +28,7 @@ pub struct Parameter {
 }
 
 // Represents a complete action schema
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)] //Serialize, Deserialize
 pub struct ActionSchema {
     pub name: String,
     pub description: String,
@@ -20,8 +36,8 @@ pub struct ActionSchema {
     pub examples: Vec<String>,
     pub parameters: Vec<Parameter>,
     pub is_public: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub callback: Option<fn(Vec<String>) -> String>, // Function pointer
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    //  pub callback: Option<fn(Vec<String>) -> String>, // Function pointer
     pub response_format: String, // Or an enum
 }
 
@@ -64,7 +80,7 @@ pub fn create_get_balance_action() -> ActionSchema {
             },
         ],
         is_public: true,
-        callback: Some(get_balance_callback), // The actual function
+        //   callback: Some(get_balance_callback), // The actual function
         response_format: "json".to_string(),
     }
 }
@@ -83,6 +99,6 @@ fn get_balance_callback(params: Vec<String>) -> String {
 }
 
 // Example of loading from JSON (for user-defined actions)
-pub fn load_action_schema_from_json(json_str: &str) -> Result<ActionSchema, serde_json::Error> {
-    serde_json::from_str(json_str)
-}
+//pub fn load_action_schema_from_json(json_str: &str) -> Result<ActionSchema, serde_json::Error> {
+//    serde_json::from_str(json_str)
+//}
