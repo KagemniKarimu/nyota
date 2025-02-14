@@ -1,5 +1,6 @@
 use nyota::api::utilities::*;
 use nyota::cli::modes::*;
+use nyota::lex::*;
 use nyota::snd::constants::{DEFAULT_MUTE, DEFAULT_VOLUME};
 use nyota::snd::control::AudioControl;
 use nyota::tui::banner::*;

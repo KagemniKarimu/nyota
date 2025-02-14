@@ -4,4 +4,4 @@
 //! Pre-parsing is done here to ensure that the input is in a format that can be understood by relevant APIs.
 //! It also provides functions for recognizing macros, heuristics, and shortcuts from user input.
 
-pub mod lexer;
+pub mod emote;
