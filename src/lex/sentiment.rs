@@ -1,3 +1,9 @@
+//! The `sentiment` module provides a way to track the sentiment of a session.
+//! It uses the `vader_sentimental` crate to analyze and accumulate the sentiment of messages.
+//! The `Sentiment` struct is used to track the sentiment of a session.
+//! The sentiment values are stored in a `SentimentState` struct, which includes the compound affect, positive affect, negative affect, neutral affect, and interaction count of all processed messages.
+//! The idea is that simple interactions accumulate over time to build a set of feelings.
+
 use anyhow::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -34,6 +40,12 @@ pub struct SentimentState {
     pub highest_compound_seen: f64,
 }
 
+/// Implementation of the `Sentiment` struct.
+/// The three public interfaces are `new`, `forget_feelings`, `get_feelings`, and `process_emotion`.
+/// The `new` method creates a new `Sentiment` struct with default values.
+/// The `forget_feelings` method resets existing sentiment state to default values.
+/// The `get_feelings` method returns the current sentiment state.
+/// The `process_emotion` method processes the sentiment of a message and updates the internal sentiment state.
 impl<'a> Sentiment<'a> {
     pub fn new() -> Self {
         Self {
