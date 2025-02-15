@@ -9,37 +9,17 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use vader_sentimental::{SentimentIntensity, SentimentIntensityAnalyzer};
 
-const DEFAULT_COMPOUND_AFFECT: f64 = 0.0;
-const DEFAULT_POSITIVE_AFFECT: f64 = 0.0;
-const DEFAULT_NEGATIVE_AFFECT: f64 = 0.0;
-const DEFAULT_NEUTRAL_AFFECT: f64 = 0.0;
+use super::mood::Mood;
 
-const MINIMUM_COMPOUND_AFFECT: f64 = -1.0;
-const MAXIMUM_COMPOUND_AFFECT: f64 = 1.0;
+const DEFAULT_COMPOUND_AFFECT: AffectScore = 0.0;
+const DEFAULT_POSITIVE_AFFECT: AffectScore = 0.0;
+const DEFAULT_NEGATIVE_AFFECT: AffectScore = 0.0;
+const DEFAULT_NEUTRAL_AFFECT: AffectScore = 0.0;
 
-// New constants for intensity calculation
-const MIN_RANGE: f64 = 0.2;
-const MAX_PURITY: f64 = 2.0;
-const INTERACTION_PLATEAU: f64 = 20.0;
+const MINIMUM_COMPOUND_AFFECT: AffectScore = -1.0;
+const MAXIMUM_COMPOUND_AFFECT: AffectScore = 1.0;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum MoodIntensity {
-    Low,
-    Medium,
-    High,
-    Extreme,
-}
-
-impl MoodIntensity {
-    fn from_score(score: f64) -> Self {
-        match score {
-            x if x >= 0.8 => Self::Extreme,
-            x if x >= 0.6 => Self::High,
-            x if x >= 0.3 => Self::Medium,
-            _ => Self::Low,
-        }
-    }
-}
+pub type AffectScore = f64;
 
 /// The `Sentiment` struct is used to track the sentiment of a session.
 /// It uses the `SentimentIntensityAnalyzer` from the `vader_sentimental` crate to analyze and accumulate the sentiment of messages.
@@ -55,49 +35,13 @@ pub struct Sentiment<'a> {
 /// It also includes the lowest and highest compound values seen so far, which are used to normalize the compound affect value.
 #[derive(Debug)]
 pub struct SentimentState {
-    pub compound_affect: f64,
-    pub positive_affect: f64,
-    pub negative_affect: f64,
-    pub neutral_affect: f64,
+    pub compound_affect: AffectScore,
+    pub positive_affect: AffectScore,
+    pub negative_affect: AffectScore,
+    pub neutral_affect: AffectScore,
     pub interaction_count: usize,
-    pub lowest_compound_seen: f64,
-    pub highest_compound_seen: f64,
-}
-
-impl SentimentState {
-    pub fn get_mood_intensity(&self) -> MoodIntensity {
-        // Range factor with dampening
-        let range = (self.highest_compound_seen - self.lowest_compound_seen).abs();
-        let range_factor = if self.interaction_count == 1 {
-            self.compound_affect.abs() // Use raw value for first interaction
-        } else if range < MIN_RANGE {
-            (self.compound_affect.abs() / MIN_RANGE).powf(1.5)
-        } else {
-            ((self.compound_affect - self.lowest_compound_seen).abs() / range).powf(1.5)
-        };
-
-        // Purity with neutral affect consideration
-        let raw_purity = if self.compound_affect >= 0.0 {
-            let positive_ratio =
-                self.positive_affect / (self.positive_affect + self.negative_affect + 0.1);
-            positive_ratio * (1.0 - self.neutral_affect)
-        } else {
-            let negative_ratio =
-                self.negative_affect / (self.positive_affect + self.negative_affect + 0.1);
-            negative_ratio * (1.0 - self.neutral_affect)
-        };
-        let purity = raw_purity.min(1.0);
-
-        // Interaction factor
-        let interaction_factor =
-            (1.0 + (self.interaction_count as f64).ln() * 0.5) / (1.0 + INTERACTION_PLATEAU.ln());
-        let interaction_factor = interaction_factor.min(1.0);
-
-        // Final calculation
-        let intensity_score = (range_factor * 0.5) + (purity * 0.3) + (interaction_factor * 0.2);
-
-        MoodIntensity::from_score(intensity_score)
-    }
+    pub lowest_compound_seen: AffectScore,
+    pub highest_compound_seen: AffectScore,
 }
 
 /// Implementation of the `Sentiment` struct.
@@ -135,7 +79,7 @@ impl<'a> Sentiment<'a> {
 
         // Calculate the weighted average of the sentiment values
         // This is to smooth out the sentiment values over time
-        let weight = 1.0 / (state.interaction_count + 1) as f64;
+        let weight = 1.0 / (state.interaction_count + 1) as AffectScore;
         let old_weight = 1.0 - weight;
 
         // Update the sentiment state with the new values
@@ -172,7 +116,7 @@ impl<'a> Sentiment<'a> {
     pub async fn get_feelings(&self) -> Result<SentimentState, Error> {
         let state = self.state.lock().await;
         Ok(SentimentState {
-            compound_affect: self.normalize_compound(
+            compound_affect: self.normalize_compound_affect(
                 state.compound_affect,
                 state.lowest_compound_seen,
                 state.highest_compound_seen,
@@ -196,7 +140,12 @@ impl<'a> Sentiment<'a> {
     /// The minimum and maximum values are used to normalize the value.
     /// If the minimum and maximum values are the same, the value is returned as is.
     /// The normalized value is returned.
-    fn normalize_compound(&self, value: f64, min: f64, max: f64) -> f64 {
+    fn normalize_compound_affect(
+        &self,
+        value: AffectScore,
+        min: AffectScore,
+        max: AffectScore,
+    ) -> AffectScore {
         // If we have no range yet, or value is already within the range, return as is
         if (max - min).abs() < f64::EPSILON
             || (value >= MINIMUM_COMPOUND_AFFECT && value <= MAXIMUM_COMPOUND_AFFECT)
@@ -223,5 +172,10 @@ impl<'a> Sentiment<'a> {
         let sentiment = self.map_sentiment(message);
         self.add_feeling(sentiment).await?;
         Ok(())
+    }
+
+    pub async fn get_mood(&self) -> Result<Mood, Error> {
+        let state = self.state.lock().await;
+        Ok(Mood::from_sentiment_state(&state))
     }
 }
