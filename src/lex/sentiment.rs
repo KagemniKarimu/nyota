@@ -17,6 +17,30 @@ const DEFAULT_NEUTRAL_AFFECT: f64 = 0.0;
 const MINIMUM_COMPOUND_AFFECT: f64 = -1.0;
 const MAXIMUM_COMPOUND_AFFECT: f64 = 1.0;
 
+// New constants for intensity calculation
+const MIN_RANGE: f64 = 0.2;
+const MAX_PURITY: f64 = 2.0;
+const INTERACTION_PLATEAU: f64 = 20.0;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MoodIntensity {
+    Low,
+    Medium,
+    High,
+    Extreme,
+}
+
+impl MoodIntensity {
+    fn from_score(score: f64) -> Self {
+        match score {
+            x if x >= 0.8 => Self::Extreme,
+            x if x >= 0.6 => Self::High,
+            x if x >= 0.3 => Self::Medium,
+            _ => Self::Low,
+        }
+    }
+}
+
 /// The `Sentiment` struct is used to track the sentiment of a session.
 /// It uses the `SentimentIntensityAnalyzer` from the `vader_sentimental` crate to analyze and accumulate the sentiment of messages.
 /// The sentiment values are stored in a `SentimentState` struct, which includes the compound affect, positive affect, negative affect, neutral affect, and interaction count of all processed messages.
@@ -38,6 +62,42 @@ pub struct SentimentState {
     pub interaction_count: usize,
     pub lowest_compound_seen: f64,
     pub highest_compound_seen: f64,
+}
+
+impl SentimentState {
+    pub fn get_mood_intensity(&self) -> MoodIntensity {
+        // Range factor with dampening
+        let range = (self.highest_compound_seen - self.lowest_compound_seen).abs();
+        let range_factor = if self.interaction_count == 1 {
+            self.compound_affect.abs() // Use raw value for first interaction
+        } else if range < MIN_RANGE {
+            (self.compound_affect.abs() / MIN_RANGE).powf(1.5)
+        } else {
+            ((self.compound_affect - self.lowest_compound_seen).abs() / range).powf(1.5)
+        };
+
+        // Purity with neutral affect consideration
+        let raw_purity = if self.compound_affect >= 0.0 {
+            let positive_ratio =
+                self.positive_affect / (self.positive_affect + self.negative_affect + 0.1);
+            positive_ratio * (1.0 - self.neutral_affect)
+        } else {
+            let negative_ratio =
+                self.negative_affect / (self.positive_affect + self.negative_affect + 0.1);
+            negative_ratio * (1.0 - self.neutral_affect)
+        };
+        let purity = raw_purity.min(1.0);
+
+        // Interaction factor
+        let interaction_factor =
+            (1.0 + (self.interaction_count as f64).ln() * 0.5) / (1.0 + INTERACTION_PLATEAU.ln());
+        let interaction_factor = interaction_factor.min(1.0);
+
+        // Final calculation
+        let intensity_score = (range_factor * 0.5) + (purity * 0.3) + (interaction_factor * 0.2);
+
+        MoodIntensity::from_score(intensity_score)
+    }
 }
 
 /// Implementation of the `Sentiment` struct.
@@ -62,7 +122,7 @@ impl<'a> Sentiment<'a> {
         }
     }
 
-    /// Add a new sentiment to the sentiment state.
+    /// Adds a new sentiment to the sentiment state.
     /// This method increments the interaction count and updates the sentiment values based on the most recent feeling in light of historical feelings.
     /// The sentiment values are weighted averages of the sentiment values seen so far.
     async fn add_feeling(&self, sentiment: SentimentIntensity) -> Result<(), Error> {
