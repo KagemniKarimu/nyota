@@ -50,6 +50,7 @@ pub struct SentimentState {
 /// The `forget_feelings` method resets existing sentiment state to default values.
 /// The `get_feelings` method returns the current sentiment state.
 /// The `process_emotion` method processes the sentiment of a message and updates the internal sentiment state.
+
 impl<'a> Sentiment<'a> {
     pub fn new() -> Self {
         Self {
@@ -174,8 +175,9 @@ impl<'a> Sentiment<'a> {
         Ok(())
     }
 
+    /// Get the current mood based on the sentiment state. Public interface for Mood.
     pub async fn get_mood(&self) -> Result<Mood, Error> {
-        let state = self.state.lock().await;
-        Ok(Mood::from_sentiment_state(&state))
+        let state = &self.get_feelings().await.unwrap();
+        Ok(Mood::from_sentiment_state(state).await)
     }
 }
