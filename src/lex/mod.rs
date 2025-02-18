@@ -6,3 +6,4 @@
 
 pub mod mood;
 pub mod sentiment;
+pub mod thought;
