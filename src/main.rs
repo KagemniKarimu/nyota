@@ -8,13 +8,16 @@ use nyota::tui::banner::*;
 use nyota::tui::interactive::*;
 use nyota::tui::menu::*;
 use nyota::tui::splash::*;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use nyota::lex::thought::{StreamOfThought, MENTAL_CONCEPT_ARCHETYPE_FILE};
+use std::io;
+use std::io::{BufRead, BufReader};
 
 use anyhow::Result;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{io::Stdout, time::Duration};
-use thought::test_mental_concepts;
 use tokio::time::sleep;
 
 #[tokio::main]
@@ -28,28 +31,46 @@ async fn main() {
 
     let sentiment = Sentiment::new();
 
+    // Create a shared instance of StreamOfThought.
+    let stream = Arc::new(Mutex::new(StreamOfThought::new(
+        MENTAL_CONCEPT_ARCHETYPE_FILE,
+    )));
+
+    // Spawn a concurrent task that makes the stream "think" repeatedly.
+    let thinker = Arc::clone(&stream);
+    tokio::spawn(async move {
+        loop {
+            {
+                let mut s = thinker.lock().await;
+                s.think().await;
+                println!("Time: {}", s.last_thought_time.format("%H:%M:%S"));
+                println!("Thoughts: {}\n---", s.last_thought_stream.join(" "));
+            }
+            sleep(Duration::from_millis(50)).await;
+        }
+    });
+
     let test_cases = [
-        "Answer this damn question",
-        "You pissing me the hell off",
-        "Who the fuck you think you talking to!",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "Answer this damn question",
-        "You pissing me the hell off",
-        "Who the fuck you think you talking to!",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "Answer this damn question",
-        "You pissing me the hell off",
-        "Who the fuck you think you talking to!",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
-        "I don't KNOW WHAT YOUR DAMN PROBLEM IS",
+        "I love you Nyota",
+        "You are my favorite bot!",
+        "Good bot! I appreciate what you do.",
+        "Thanks for all your work",
+        "I love you Nyota",
+        "You are my favorite bot!",
+        "Good bot! I appreciate what you do.",
+        "Thanks for all your work",
+        "I love you Nyota",
+        "You are my favorite bot!",
+        "Good bot! I appreciate what you do.",
+        "Thanks for all your work",
+        "I love you Nyota",
+        "You are my favorite bot!",
+        "Good bot! I appreciate what you do.",
+        "Thanks for all your work",
+        "I love you Nyota",
+        "You are my favorite bot!",
+        "Good bot! I appreciate what you do.",
+        "Thanks for all your work",
     ];
 
     for msg in test_cases.iter() {
@@ -63,20 +84,33 @@ async fn main() {
         );
     }
 
-    let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+    let mut stdin = io::BufReader::new(io::stdin()).lines();
+    println!("Type a new concept, 'show' to see frequent thoughts, or 'quit' to exit:");
 
-    println!("Starting thought stream simulation...");
-    println!("Press Ctrl+C to stop");
-
-    // Run for a while to observe thought patterns
-    loop {
-        stream.think();
-
-        // Print the timestamp and the thought stream
-        println!("Time: {}", stream.last_thought_time.format("%H:%M:%S"));
-        println!("Thoughts: {}", stream.last_thought_stream.join(" "));
-        println!("---"); // Separator for readability
+    while let Some(Ok(line)) = stdin.next() {
+        let input = line.trim().to_string();
+        if input.eq_ignore_ascii_case("quit") {
+            break;
+        } else if input.eq_ignore_ascii_case("show") {
+            // For convenience, we'll show the top 5 frequent thoughts.
+            let s = stream.lock().await;
+            let frequent = s.get_frequent_thoughts(5);
+            println!("Frequent thoughts:");
+            for thought in frequent {
+                println!(" - {}", thought);
+            }
+        } else {
+            // Otherwise, treat the input as a new concept.
+            let mut s = stream.lock().await;
+            if let Err(err) = s.learn_new_concept(input.clone()) {
+                eprintln!("Error adding concept {}: {:?}", input, err);
+            } else {
+                println!("Added new concept: {}", input);
+            }
+        }
     }
+
+    println!("Exiting...");
 
     //    Ok(())
     //    test_mental_concepts();

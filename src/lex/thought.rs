@@ -12,7 +12,7 @@ use std::time::Duration;
 
 static MENTAL_CONCEPT_ARCHETYPES: OnceLock<ThoughtConceptList> = OnceLock::new();
 pub const MENTAL_CONCEPT_ARCHETYPE_FILE: &str =
-    "/home/kagemnikarimu/Projects/RustProjects/nyota/src/lex/eff_large_wordlist.txt";
+    "/home/kagemnikarimu/Projects/RustProjects/nyota/src/lex/mental_archetypes.txt";
 const DEFAULT_TIMES_THOUGHT: u32 = 0;
 type ThoughtConceptList = Mutex<Vec<ThoughtConcept>>;
 
@@ -31,7 +31,7 @@ pub fn load_mental_concepts(from_file_path: &str) -> Result<(), Error> {
     let file = File::open(from_file_path)?;
     let buffer_file = BufReader::new(file);
 
-    let parsed_concepts = parse_eff_large_wordlist(buffer_file)?;
+    let parsed_concepts = parse_mental_archetypes(buffer_file)?;
 
     // Initialize the OnceCell with an empty Vec in a Mutex
     let mut archetypes = MENTAL_CONCEPT_ARCHETYPES
@@ -50,6 +50,21 @@ pub fn load_mental_concepts(from_file_path: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn parse_mental_archetypes(buffered_file: BufReader<File>) -> Result<Vec<String>, Error> {
+    let mut list: Vec<String> = Vec::new();
+    for line in buffered_file.lines() {
+        match line {
+            Ok(item) => list.push(item.to_string()),
+            Err(e) => {
+                return Err(Error::msg(format!(
+                    "Error reading line from mental_archetypes.txt: {}",
+                    e
+                )));
+            }
+        }
+    }
+    Ok(list)
+}
 fn parse_eff_large_wordlist(buffered_file: BufReader<File>) -> Result<Vec<String>, Error> {
     let mut list: Vec<String> = Vec::new();
     for line in buffered_file.lines() {
@@ -84,7 +99,7 @@ pub struct StreamOfThought<'a> {
     pub last_thought_time: chrono::DateTime<Local>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ThoughtConcept {
     name: String,
     times_thought: u32,
@@ -110,7 +125,7 @@ impl<'a> StreamOfThought<'a> {
         Normal::new(THOUGHT_FREQUENCY, THOUGHT_FREQUENCY_STANDARD_DEVIATION).unwrap()
     }
 
-    fn get_frequent_thoughts(&self, limit: usize) -> Vec<String> {
+    pub fn get_frequent_thoughts(&self, limit: usize) -> Vec<String> {
         let concepts = self.concepts.get().unwrap().lock().unwrap();
         let mut concept_vec: Vec<&ThoughtConcept> = concepts.iter().collect();
         concept_vec.sort_by(|a, b| b.times_thought.cmp(&a.times_thought));
@@ -121,19 +136,24 @@ impl<'a> StreamOfThought<'a> {
             .collect()
     }
 
-    fn learn_new_concept(&mut self, concept: String) -> Result<(), Error> {
+    pub fn learn_new_concept(&mut self, concept_name: String) -> Result<(), Error> {
         let mut concepts = self.concepts.get().unwrap().lock().unwrap();
-        let new_concept = ThoughtConcept {
-            name: concept,
-            times_thought: 1,
-        };
-        concepts.push(new_concept);
+        let known_concept = concepts.iter_mut().find(|c| c.name == concept_name);
+        if let Some(thought_concept) = known_concept {
+            thought_concept.times_thought += 1;
+        } else {
+            let new_concept = ThoughtConcept {
+                name: concept_name,
+                times_thought: 1,
+            };
+            concepts.push(new_concept);
+        }
         Ok(())
     }
 
-    pub fn think(&mut self) {
+    pub async fn think(&mut self) {
         let time_until_next_thought = self.get_time_until_next_thought();
-        std::thread::sleep(time_until_next_thought);
+        tokio::time::sleep(time_until_next_thought).await;
         self.last_thought_time = Local::now();
         self.last_thought_stream = self.generate_thought_stream();
     }
