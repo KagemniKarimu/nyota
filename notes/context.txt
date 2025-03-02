@@ -1,0 +1,2 @@
+Context:
+- most of the content like goal, etc is in string formats 
