@@ -34,7 +34,7 @@ cp .env.example .env
 NOTE: Your API keys are sensitive information. Do not show this file to anyone.
 ```env
 
-ANTHROPIC_API_KEY=sk-ant-api03-c0EvjmtPAQEndmNxetcetcetcetc
+ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 OPENROUTER_API_KEY=
 ```
