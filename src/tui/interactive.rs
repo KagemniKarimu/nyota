@@ -1,4 +1,9 @@
-use crate::{api::utilities::Adapter, snd::player::*};
+//! Interactive chat interface using TUI.
+//! This module provides an interactive chat interface using the features from the `ratatui` crate.
+//! The chat interface allows the user to send messages to an AI model and receive responses.
+//! The chat interface is designed to be interactive and user-friendly.
+
+use crate::{api::utilities::Adapter, snd::control::AudioControl};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use crossterm::event::{self, Event, KeyCode};
@@ -243,23 +248,20 @@ impl<'a> ChatInterface<'a> {
 
             if let Event::Key(key) = event::read()? {
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => {
+                    KeyCode::Esc => {
                         break;
                     }
                     KeyCode::Enter => {
-                        if key.modifiers.contains(event::KeyModifiers::CONTROL) {
-                            play_backspace();
-                        }
-                        play_message_sent(); // Play sound when sending message
+                        AudioControl::play_message_sent_noise().await?; // Play sound when sending message
                         self.submit_message().await;
                         // Handle message sending
                     }
                     KeyCode::Backspace => {
-                        play_backspace(); // Play sound when deleting
+                        // AudioControl::play_backspace_noise().await?; // Play sound when deleting
                         self.input.input(key);
                     }
                     _ => {
-                        // Play sound for normal keystrokes
+                        // AudioControl::play_keystroke_noise().await?; // Play sound for normal keystrokes
                         self.input.input(key);
                     }
                 }
