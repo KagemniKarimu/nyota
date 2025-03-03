@@ -30,3 +30,23 @@ impl ConversationStore for RedisStore {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cache::convo::ConversationStore;
+
+    const TEST_REDIS_URL: &str = "redis://127.0.0.1/";
+
+    #[test]
+    fn test_redis_store_append_and_get() {
+        let mut store = RedisStore::new(TEST_REDIS_URL).expect("Failed to connect to Redis");
+        let key = "test_redis_key";
+        let message = "Hello from Redis!";
+        // Append the message.
+        store.append_message(key, message).unwrap();
+        // Retrieve and compare.
+        let retrieved = store.get_message(key).unwrap();
+        assert_eq!(retrieved, Some(message.to_string()));
+    }
+}

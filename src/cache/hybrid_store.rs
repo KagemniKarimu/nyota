@@ -42,3 +42,21 @@ impl ConversationStore for HybridStore {
         Ok(None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cache::convo::ConversationStore;
+
+    const TEST_REDIS_URL: &str = "redis://127.0.0.1/";
+
+    #[test]
+    fn test_hybrid_store_append_and_get() {
+        let mut store = HybridStore::new(10, TEST_REDIS_URL).expect("Failed to create HybridStore");
+        let key = "test_hybrid_key";
+        let message = "Hybrid test message";
+        store.append_message(key, message).unwrap();
+        let retrieved = store.get_message(key).unwrap();
+        assert_eq!(retrieved, Some(message.to_string()));
+    }
+}
