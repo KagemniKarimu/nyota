@@ -10,6 +10,7 @@ use std::sync::LazyLock;
 pub const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 pub const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 pub const OPENROUTER_API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
+pub const GROK_API_URL: &str = "https://api.x.ai/v1/chat/completions";
 pub const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 
 // *** Nyota Default Configuration ***
@@ -22,11 +23,12 @@ pub const DEFAULT_MODEL: &'static str = "gpt-4o-mini";
 // ***Supported API Providers ***
 // Note: Some provider configurations may work for unsupported models
 /// The hardcoded list of supported API providers, used in initialization and validation.
-pub const SUPPORTED_PROVIDERS: [ApiProvider; 4] = [
+pub const SUPPORTED_PROVIDERS: [ApiProvider; 5] = [
     ApiProvider::ANTHROPIC,
     ApiProvider::OPENAI,
     ApiProvider::OPENROUTER,
     ApiProvider::OLLAMA,
+    ApiProvider::GROK,
 ];
 
 // *** Supported Models (non-exhaustive) ***
@@ -56,6 +58,9 @@ pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::ne
     m.insert("claude-3-sonnet-20240229", ApiProvider::ANTHROPIC);
     m.insert("claude-2.1", ApiProvider::ANTHROPIC);
     m.insert("claude-2.1-sonnet", ApiProvider::ANTHROPIC);
+
+    // Load All Supported Grok Models
+    m.insert("grok-2-1212", ApiProvider::GROK);
 
     m
 });

@@ -37,6 +37,7 @@ NOTE: Your API keys are sensitive information. Do not show this file to anyone.
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 OPENROUTER_API_KEY=
+GROK_API_KEY=
 ```
 
 4. Select your default model in the .env file
