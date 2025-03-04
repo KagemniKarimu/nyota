@@ -18,6 +18,7 @@ pub enum ApiProvider {
     ANTHROPIC,
     OLLAMA,
     OPENROUTER,
+    GROK,
 }
 /// Adapter acts as an interface which tracks global API state and retains API keys gathered from the environmental variables.
 /// Even though a default Adapter is provided, it is recommended to create a new instance for each chat session.
@@ -183,6 +184,10 @@ impl Adapter {
                 .post(OPENROUTER_API_URL)
                 .header("Content-Type", "application/json")
                 .header("Authorization", format!("Bearer {}", api_key)),
+            ApiProvider::GROK => client
+                .post(GROK_API_URL)
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", api_key)),
         };
         submission.json(&request).send().await.map_err(|e| {
             Error::msg(format!(
@@ -202,6 +207,7 @@ fn get_api_key_from_env(selected_provider: &ApiProvider) -> Result<String, Error
         ApiProvider::ANTHROPIC => env::var("ANTHROPIC_API_KEY"),
         ApiProvider::OLLAMA => Ok(String::from("")),
         ApiProvider::OPENROUTER => env::var("OPENROUTER_API_KEY"),
+        ApiProvider::GROK => env::var("GROK_API_KEY"),
     };
 
     match api_name {
@@ -315,6 +321,17 @@ async fn formulate_request(provider: ApiProvider, model: &str, msg: &str) -> Val
                 ]
             })
         }
+        ApiProvider::GROK => {
+            req = json!({
+                "model": model,
+               "store": true,
+                "stream": false,
+                "messages": [
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": msg}
+                ]
+            });
+        }
     }
     return req;
 }
@@ -330,6 +347,7 @@ pub async fn parse_response(model: ApiProvider, api_response: Response) -> Resul
             ApiProvider::ANTHROPIC => parse_anthropic_response(json).await,
             ApiProvider::OLLAMA => parse_ollama_response(json).await,
             ApiProvider::OPENROUTER => parse_openrouter_response(json).await,
+            ApiProvider::GROK => parse_grok_response(json).await,
         }
     } else {
         let error_text = api_response.text().await?;
@@ -371,5 +389,15 @@ async fn parse_openrouter_response(json_response: Value) -> Result<String, Error
     let content = json_response["choices"][0]["message"]["content"]
         .as_str()
         .ok_or_else(|| Error::msg("No content found in response!"))?;
+    Ok(String::from(content))
+}
+
+/// Parses a JSON response from Grok and returns the relevant content as a string.
+async fn parse_grok_response(json_response: Value) -> Result<String, Error> {
+    // DEBUG println!("{:#?}", json_response);
+    let content = json_response["choices"][0]["message"]["content"]
+        .as_str()
+        .ok_or_else(|| Error::msg("No content found in response!"))?;
+
     Ok(String::from(content))
 }
