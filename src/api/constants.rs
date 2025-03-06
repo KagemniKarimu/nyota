@@ -10,7 +10,7 @@ use std::sync::LazyLock;
 pub const OPENAI_API_URL: &str = "https://api.openai.com/v1/chat/completions";
 pub const ANTHROPIC_API_URL: &str = "https://api.anthropic.com/v1/messages";
 pub const OPENROUTER_API_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
-pub const GROK_API_URL: &str = "https://api.x.ai/v1/chat/completions";
+pub const XAI_API_URL: &str = "https://api.x.ai/v1/chat/completions";
 pub const OLLAMA_API_URL: &str = "http://localhost:11434/api/generate";
 
 // *** Nyota Default Configuration ***
@@ -28,7 +28,7 @@ pub const SUPPORTED_PROVIDERS: [ApiProvider; 5] = [
     ApiProvider::OPENAI,
     ApiProvider::OPENROUTER,
     ApiProvider::OLLAMA,
-    ApiProvider::GROK,
+    ApiProvider::XAI,
 ];
 
 // *** Supported Models (non-exhaustive) ***
@@ -59,8 +59,8 @@ pub static SUPPORTED_MODELS: LazyLock<HashMap<&str, ApiProvider>> = LazyLock::ne
     m.insert("claude-2.1", ApiProvider::ANTHROPIC);
     m.insert("claude-2.1-sonnet", ApiProvider::ANTHROPIC);
 
-    // Load All Supported Grok Models
-    m.insert("grok-2-1212", ApiProvider::GROK);
+    // Load All Supported X AI Models
+    m.insert("grok-2-1212", ApiProvider::XAI);
 
     m
 });
