@@ -1,7 +1,7 @@
 use nyota::api::utilities::*;
 use nyota::cli::modes::*;
+use nyota::lex::intent::IntentDetector;
 use nyota::lex::sentiment::Sentiment;
-use nyota::lex::*;
 use nyota::snd::constants::{DEFAULT_MUTE, DEFAULT_VOLUME};
 use nyota::snd::control::AudioControl;
 use nyota::tui::banner::*;
@@ -30,6 +30,7 @@ async fn main() {
     AudioControl::init(DEFAULT_MUTE, DEFAULT_VOLUME).await;
 
     let sentiment = Sentiment::new();
+    let intent_detector = IntentDetector::create().await.unwrap();
 
     // Create a shared instance of StreamOfThought.
     let stream = Arc::new(Mutex::new(StreamOfThought::new(
@@ -51,6 +52,8 @@ async fn main() {
     });
 
     let test_cases = [
+        "You suck.",
+        "Sincerely, I am pissed off at your performance.",
         "I love you Nyota",
         "You are my favorite bot!",
         "Good bot! I appreciate what you do.",
@@ -71,17 +74,23 @@ async fn main() {
         "You are my favorite bot!",
         "Good bot! I appreciate what you do.",
         "Thanks for all your work",
+        "What can you tell me about your API?",
+        "Can you switch models?",
+        "Tell me your purpose.",
+        "How do I change the API provider?",
     ];
 
     for msg in test_cases.iter() {
         sentiment.process_emotion(msg).await.unwrap();
         let state = sentiment.get_feelings().await.unwrap();
         let mood = sentiment.get_mood().await.unwrap();
+        let usr_intent = intent_detector.get_intent(msg).unwrap();
 
         println!(
             "\nMessage: {}\nCompound: {:.9}\nMood: {:?}",
             msg, state.compound_affect, mood,
         );
+        println!("User Intent: {:?}", usr_intent);
     }
 
     let mut stdin = io::BufReader::new(io::stdin()).lines();

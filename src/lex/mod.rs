@@ -4,6 +4,9 @@
 //! Pre-parsing is done here to ensure that the input is in a format that can be understood by relevant APIs.
 //! It also provides functions for recognizing macros, heuristics, and shortcuts from user input.
 
+pub mod intent;
+pub mod intentions;
 pub mod mood;
 pub mod sentiment;
 pub mod thought;
+pub mod tokenize;
