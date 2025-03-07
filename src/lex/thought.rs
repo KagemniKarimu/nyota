@@ -205,3 +205,164 @@ impl<'a> StreamOfThought<'a> {
         Duration::from_millis(time_until_next_thought as u64)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+    use tokio::time::sleep;
+
+    #[tokio::test]
+    async fn test_stream_initialization() {
+        let stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+        assert!(
+            !stream.last_thought_stream.is_empty(),
+            "Should initialize with empty thought stream"
+        );
+        assert!(
+            stream.last_thought_time <= chrono::Local::now(),
+            "Last thought time should be valid"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_thinking_generates_thoughts() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        // Make the stream think
+        stream.think().await;
+
+        println!(
+            "Generated thoughts: {}",
+            stream.last_thought_stream.join(" ")
+        );
+        assert!(
+            !stream.last_thought_stream.is_empty(),
+            "Should generate thoughts"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_concept_learning() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        // Learn a new concept
+        let new_concept = "quantum_blockchain".to_string();
+        stream.learn_new_concept(new_concept.clone()).unwrap();
+
+        // Get frequent thoughts to verify learning
+        let frequent_thoughts = stream.get_frequent_thoughts(10);
+        println!("Frequent thoughts after learning: {:?}", frequent_thoughts);
+
+        assert!(
+            frequent_thoughts.contains(&new_concept),
+            "New concept should be in frequent thoughts"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_thought_frequency() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        // Think multiple times
+        for _ in 0..3 {
+            stream.think().await;
+            sleep(Duration::from_millis(100)).await;
+        }
+
+        // Get frequent thoughts
+        let frequent_thoughts = stream.get_frequent_thoughts(5);
+        println!("Most frequent thoughts: {:?}", frequent_thoughts);
+        assert!(
+            !frequent_thoughts.is_empty(),
+            "Should have frequent thoughts"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_multiple_concept_learning() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        // Learn multiple concepts
+        let concepts = vec![
+            "defi_protocol".to_string(),
+            "yield_farming".to_string(),
+            "liquidity_pool".to_string(),
+        ];
+
+        for concept in concepts.iter() {
+            stream.learn_new_concept(concept.clone()).unwrap();
+        }
+
+        let frequent = stream.get_frequent_thoughts(10);
+        println!(
+            "Frequent thoughts after learning multiple concepts: {:?}",
+            frequent
+        );
+
+        // Check if learned concepts are present
+        for concept in concepts {
+            assert!(
+                frequent.contains(&concept),
+                "Learned concept should be in frequent thoughts: {}",
+                concept
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_thought_timing() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        let start_time = chrono::Local::now();
+        stream.think().await;
+        let end_time = chrono::Local::now();
+
+        assert!(
+            stream.last_thought_time >= start_time,
+            "Thought time should be after start"
+        );
+        assert!(
+            stream.last_thought_time <= end_time,
+            "Thought time should be before end"
+        );
+
+        println!("Thought generation time: {:?}", end_time - start_time);
+    }
+
+    #[tokio::test]
+    async fn test_duplicate_concept_learning() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        let concept = "smart_contract".to_string();
+
+        // Learn the same concept multiple times
+        for _ in 0..3 {
+            stream.learn_new_concept(concept.clone()).unwrap();
+        }
+
+        let frequent = stream.get_frequent_thoughts(5);
+        println!("Frequent thoughts after duplicate learning: {:?}", frequent);
+
+        // The concept should be present but only once
+        assert_eq!(
+            frequent.iter().filter(|&x| x == &concept).count(),
+            1,
+            "Concept should appear only once in frequent thoughts"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_concept_handling() {
+        let mut stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
+        // Try to learn an empty concept
+        let result = stream.learn_new_concept("".to_string());
+        assert!(result.is_err(), "Should handle empty concept gracefully");
+
+        // Try to learn a very long concept
+        let long_concept = "a".repeat(1000);
+        let result = stream.learn_new_concept(long_concept);
+        assert!(result.is_err(), "Should handle too-long concept gracefully");
+    }
+}
