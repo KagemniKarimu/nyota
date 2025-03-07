@@ -2,6 +2,7 @@ use nyota::api::utilities::*;
 use nyota::cli::modes::*;
 use nyota::lex::intent::IntentDetector;
 use nyota::lex::sentiment::Sentiment;
+use nyota::lex::tokenize;
 use nyota::snd::constants::{DEFAULT_MUTE, DEFAULT_VOLUME};
 use nyota::snd::control::AudioControl;
 use nyota::tui::banner::*;
@@ -85,12 +86,14 @@ async fn main() {
         let state = sentiment.get_feelings().await.unwrap();
         let mood = sentiment.get_mood().await.unwrap();
         let usr_intent = intent_detector.get_intent(msg).unwrap();
+        let keyword_list = tokenize::extract_keywords(msg);
 
         println!(
             "\nMessage: {}\nCompound: {:.9}\nMood: {:?}",
             msg, state.compound_affect, mood,
         );
         println!("User Intent: {:?}", usr_intent);
+        println!("Keywords: {:?}", keyword_list);
     }
 
     let mut stdin = io::BufReader::new(io::stdin()).lines();

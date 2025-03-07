@@ -1,18 +1,17 @@
 use anyhow::Error;
 use chrono::Local;
 use rand::Rng;
-use rand_chacha::{ChaCha20Rng, ChaCha8Rng};
+use rand_chacha::ChaCha8Rng;
 use rand_core::{RngCore, SeedableRng};
 use rand_distr::{Distribution, Normal};
-use sha2::{Digest, Sha256};
+use sha2::Digest;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 static MENTAL_CONCEPT_ARCHETYPES: OnceLock<ThoughtConceptList> = OnceLock::new();
-pub const MENTAL_CONCEPT_ARCHETYPE_FILE: &str =
-    "/home/kagemnikarimu/Projects/RustProjects/nyota/src/lex/mental_archetypes.txt";
+pub const MENTAL_CONCEPT_ARCHETYPE_FILE: &str = "src/lex/lexicon/mental_archetypes.txt";
 const DEFAULT_TIMES_THOUGHT: u32 = 0;
 type ThoughtConceptList = Mutex<Vec<ThoughtConcept>>;
 
@@ -65,7 +64,7 @@ fn parse_mental_archetypes(buffered_file: BufReader<File>) -> Result<Vec<String>
     }
     Ok(list)
 }
-fn parse_eff_large_wordlist(buffered_file: BufReader<File>) -> Result<Vec<String>, Error> {
+fn _parse_eff_large_wordlist(buffered_file: BufReader<File>) -> Result<Vec<String>, Error> {
     let mut list: Vec<String> = Vec::new();
     for line in buffered_file.lines() {
         match line {

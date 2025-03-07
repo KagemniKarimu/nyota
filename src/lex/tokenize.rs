@@ -2,7 +2,7 @@ use yake_rust::{get_n_best, Config, ResultItem, StopWords};
 
 type KeyWordList = Vec<ResultItem>;
 
-fn extract_keywords(text: &str) -> KeyWordList {
+pub fn extract_keywords(text: &str) -> KeyWordList {
     let config = Config {
         ngrams: 3,
         ..Config::default()

@@ -1,6 +1,5 @@
 // New constants for intensity calculation
 
-use crate::lex::sentiment::Sentiment;
 use crate::lex::sentiment::SentimentState;
 
 use std::fmt;
