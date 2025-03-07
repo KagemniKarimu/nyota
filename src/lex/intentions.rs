@@ -46,11 +46,15 @@ fn api() -> ClassDefinition {
 fn greeting() -> ClassDefinition {
     ClassDefinition::new("greeting", "Intents related to greetings and salutations.").with_examples(
         vec![
+            "yo nyota",
+            "How are you?",
             "Hello!",
             "Hi there!",
             "Good morning!",
             "Good evening!",
             "Hey!",
+            "Greetings Nyota",
+            "Hello there.",
         ],
     )
 }
@@ -61,11 +65,14 @@ fn farewell() -> ClassDefinition {
         "Intents related to saying goodbye or ending conversations.",
     )
     .with_examples(vec![
-        "Goodbye!",
-        "See you later!",
+        "Goodbye",
+        "See you later",
         "Take care!",
         "Bye for now!",
         "I have to go.",
+        "Bye.",
+        "g2g",
+        "cya",
     ])
 }
 
@@ -74,7 +81,7 @@ fn help() -> ClassDefinition {
         .with_examples(vec![
             "Can you help me?",
             "I need assistance.",
-            "What can you do for me?",
+            "Would you be able to help?",
             "I have a question.",
             "Help me out, please.",
         ])
@@ -83,6 +90,7 @@ fn help() -> ClassDefinition {
 fn thanks() -> ClassDefinition {
     ClassDefinition::new("thanks", "Intents related to expressing gratitude.").with_examples(vec![
         "Thank you!",
+        "Grateful for what you did.",
         "I appreciate it!",
         "Thanks a lot!",
         "You're a lifesaver!",
@@ -110,6 +118,8 @@ fn unknown() -> ClassDefinition {
         "Intents for handling unknown or unrecognized inputs.",
     )
     .with_examples(vec![
+        "blslajsdkdshlfshasdjads",
+        "09303808130nxonsasasko",
         "I don't understand.",
         "What does that mean?",
         "Can you clarify?",
