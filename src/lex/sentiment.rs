@@ -181,3 +181,202 @@ impl<'a> Sentiment<'a> {
         Ok(Mood::from_sentiment_state(state).await)
     }
 }
+
+// Unit tests for the sentiment module
+// A complete testing suite!
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lex::mood::MoodIntensity;
+    use tokio;
+
+    // Helper function to process multiple messages and get final state
+    async fn process_messages(
+        sentiment: &Sentiment<'_>,
+        messages: &[&str],
+    ) -> Result<SentimentState, Error> {
+        for msg in messages {
+            sentiment.process_emotion(msg).await?;
+        }
+        sentiment.get_feelings().await
+    }
+
+    #[tokio::test]
+    async fn test_positive_sentiment_accumulation() {
+        let sentiment = Sentiment::new();
+        let positive_messages = [
+            "I love you Nyota",
+            "You are my favorite bot!",
+            "Good bot! I appreciate what you do.",
+            "Thanks for all your work",
+        ];
+
+        let state = process_messages(&sentiment, &positive_messages)
+            .await
+            .unwrap();
+        assert!(state.compound_affect > 0.0, "Expected positive sentiment");
+        assert!(
+            state.positive_affect > state.negative_affect,
+            "Expected more positive than negative affect"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_negative_sentiment_accumulation() {
+        let sentiment = Sentiment::new();
+        let negative_messages = [
+            "You suck.",
+            "Sincerely, I am pissed off at your performance.",
+        ];
+
+        let state = process_messages(&sentiment, &negative_messages)
+            .await
+            .unwrap();
+        assert!(state.compound_affect < 0.0, "Expected negative sentiment");
+        assert!(
+            state.negative_affect > state.positive_affect,
+            "Expected more negative than positive affect"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_sentiment_state_tracking() {
+        let sentiment = Sentiment::new();
+
+        // Test initial state
+        let initial_state = sentiment.get_feelings().await.unwrap();
+        assert_eq!(initial_state.interaction_count, 0);
+        assert_eq!(initial_state.compound_affect, 0.0);
+
+        // Process a message and check state updates
+        sentiment.process_emotion("Hello!").await.unwrap();
+        let updated_state = sentiment.get_feelings().await.unwrap();
+        assert_eq!(updated_state.interaction_count, 1);
+        assert!(updated_state.compound_affect != 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_mood_transitions() {
+        let sentiment = Sentiment::new();
+
+        // Test transition to happy mood
+        sentiment
+            .process_emotion("I absolutely love this! You're amazing!")
+            .await
+            .unwrap();
+        let good_mood = sentiment.get_mood().await.unwrap();
+        // Add appropriate assertion based on your mood enum
+        assert!(good_mood.is_positive());
+
+        // Test transition to angry mood
+        sentiment.forget_feelings().await.unwrap();
+        sentiment
+            .process_emotion("This is terrible! I hate it!")
+            .await
+            .unwrap();
+        let bad_mood = sentiment.get_mood().await.unwrap();
+        assert!(bad_mood.is_negative());
+    }
+
+    #[tokio::test]
+    async fn test_sentiment_reset() {
+        let sentiment = Sentiment::new();
+
+        // Process some messages
+        sentiment.process_emotion("I love this!").await.unwrap();
+
+        // Reset feelings
+        sentiment.forget_feelings().await.unwrap();
+
+        // Check if state is reset
+        let reset_state = sentiment.get_feelings().await.unwrap();
+        assert_eq!(reset_state.interaction_count, 0);
+        assert_eq!(reset_state.compound_affect, 0.0);
+    }
+
+    #[tokio::test]
+    async fn test_emoji_interpretation() {
+        let sentiment = Sentiment::new();
+
+        let interpreted = sentiment.interpret_emojis("I love it! 😊");
+        assert!(
+            interpreted.contains("smiling face"),
+            "Should interpret emoji meaning"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_mixed_sentiment_processing() {
+        let sentiment = Sentiment::new();
+        let mixed_messages = [
+            "This is great!",
+            "But this part is terrible.",
+            "Overall though, I like it.",
+        ];
+
+        let state = process_messages(&sentiment, &mixed_messages).await.unwrap();
+        assert_ne!(
+            state.compound_affect, 0.0,
+            "Should have non-zero compound affect"
+        );
+        assert!(
+            state.positive_affect > 0.0,
+            "Should have some positive affect"
+        );
+        assert!(
+            state.negative_affect > 0.0,
+            "Should have some negative affect"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_mood_intensity_progression() {
+        let sentiment = Sentiment::new();
+
+        // Test progression to extreme positive
+        let messages = [
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+            "This is nice!",
+            "This is really great!",
+            "This is absolutely amazing!",
+            "This is the best thing ever!!!",
+        ];
+
+        for msg in messages.iter() {
+            sentiment.process_emotion(msg).await.unwrap();
+        }
+
+        let mood = sentiment.get_mood().await.unwrap();
+        assert!(mood.is_positive(), "Mood should be positive");
+        assert!(
+            matches!(
+                mood.intensity(),
+                MoodIntensity::High | MoodIntensity::Extreme
+            ),
+            "Mood intensity should be high or extreme after multiple highly positive messages"
+        );
+    }
+}

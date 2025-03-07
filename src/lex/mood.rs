@@ -42,6 +42,63 @@ impl Mood {
             intensity: MoodIntensity::from_sentiment_state(sentiment_state),
         }
     }
+
+    pub fn is_positive(&self) -> bool {
+        matches!(
+            self.state,
+            // Extreme Positive
+            MoodState::Ecstatic |
+               MoodState::Exhilarated |
+               MoodState::Euphoric |
+               // High Positive
+               MoodState::Elated |
+               MoodState::Enthusiastic |
+               MoodState::Excited |
+               // Medium Positive
+               MoodState::Happy |
+               MoodState::Cheerful |
+               MoodState::Pleased |
+               // Low Positive
+               MoodState::Content |
+               MoodState::Satisfied |
+               MoodState::Comfortable
+        )
+    }
+
+    /// Returns true if the mood state is considered negative
+    pub fn is_negative(&self) -> bool {
+        matches!(
+            self.state,
+            // Extreme Negative
+            MoodState::Despairing |
+               MoodState::Devastated |
+               MoodState::Anguished |
+               // High Negative
+               MoodState::Angry |
+               MoodState::Enraged |
+               MoodState::Furious |
+               // Medium Negative
+               MoodState::Frustrated |
+               MoodState::Anxious |
+               MoodState::Distressed |
+               // Low Negative
+               MoodState::Unsettled |
+               MoodState::Uneasy |
+               MoodState::Concerned
+        )
+    }
+
+    /// Returns true if the mood state is neutral
+    pub fn is_neutral(&self) -> bool {
+        matches!(
+            self.state,
+            MoodState::Intrigued | MoodState::Calm | MoodState::Pensive
+        )
+    }
+
+    pub fn intensity(&self) -> &MoodIntensity {
+        &self.intensity
+    }
 }
 
 impl fmt::Display for Mood {
