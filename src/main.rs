@@ -79,6 +79,7 @@ async fn main() {
         "Can you switch models?",
         "Tell me your purpose.",
         "How do I change the API provider?",
+        "Hello there!",
     ];
 
     for msg in test_cases.iter() {
