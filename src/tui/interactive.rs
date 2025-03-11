@@ -39,8 +39,8 @@ impl Default for InputMode {
 enum ConnectionStatus {
     #[default]
     Connected,
-    Disconnected,
-    Thinking,
+    _Disconnected,
+    _Thinking,
     Error,
 }
 
@@ -56,7 +56,7 @@ struct StatusLine {
 #[derive(Clone, Debug)]
 pub struct Message {
     content: String,
-    timestamp: DateTime<Utc>,
+    _timestamp: DateTime<Utc>,
     is_user: bool, // true if from user, false if from bot
 }
 
@@ -67,7 +67,7 @@ pub struct ChatInterface<'a> {
     /// Text input area
     input: TextArea<'a>,
     /// Whether the interface should exit
-    should_quit: bool,
+    _should_quit: bool,
     /// API adapter for sending messages
     api_adapter: Adapter,
     /// Status information
@@ -89,7 +89,7 @@ impl<'a> ChatInterface<'a> {
         Self {
             messages: Vec::new(),
             input,
-            should_quit: false,
+            _should_quit: false,
             api_adapter,
             status: StatusLine {
                 mode: InputMode::Normal,
@@ -130,8 +130,8 @@ impl<'a> ChatInterface<'a> {
 
         let connection_indicator = match self.status.connection_status {
             ConnectionStatus::Connected => Span::styled("●", Style::default().fg(Color::Green)),
-            ConnectionStatus::Disconnected => Span::styled("●", Style::default().fg(Color::Red)),
-            ConnectionStatus::Thinking => Span::styled("●", Style::default().fg(Color::Yellow)),
+            ConnectionStatus::_Disconnected => Span::styled("●", Style::default().fg(Color::Red)),
+            ConnectionStatus::_Thinking => Span::styled("🧠", Style::default().fg(Color::Yellow)),
             ConnectionStatus::Error => Span::styled("●", Style::default().fg(Color::Red)),
         };
 
@@ -169,7 +169,7 @@ impl<'a> ChatInterface<'a> {
             // Add user message
             self.messages.push(Message {
                 content: input_content.to_string(),
-                timestamp: Utc::now(),
+                _timestamp: Utc::now(),
                 is_user: true,
             });
 
@@ -191,7 +191,7 @@ impl<'a> ChatInterface<'a> {
 
             self.messages.push(Message {
                 content: llm_talk,
-                timestamp: Utc::now(),
+                _timestamp: Utc::now(),
                 is_user: false,
             });
         }
@@ -278,7 +278,7 @@ pub struct _ChatManager<'a> {
     /// Currently focused chat
     active_chat: ChatId,
     /// Input mode (Normal, Insert, Visual - vim-like)
-    mode: InputMode,
+    _mode: InputMode,
 }
 
 impl<'a> _ChatManager<'a> {
@@ -293,7 +293,7 @@ impl<'a> _ChatManager<'a> {
         Self {
             chats,
             active_chat: default_chat,
-            mode: InputMode::Normal,
+            _mode: InputMode::Normal,
         }
     }
 

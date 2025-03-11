@@ -86,7 +86,7 @@ pub fn create_get_balance_action() -> ActionSchema {
 }
 
 // Dummy callback function for demonstration
-fn get_balance_callback(params: Vec<String>) -> String {
+fn _get_balance_callback(params: Vec<String>) -> String {
     // In a real implementation, this function would:
     // 1. Parse the parameters (chain, address).
     // 2. Call the appropriate blockchain API.
