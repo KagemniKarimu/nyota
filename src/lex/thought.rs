@@ -13,6 +13,7 @@ use std::time::Duration;
 static MENTAL_CONCEPT_ARCHETYPES: OnceLock<ThoughtConceptList> = OnceLock::new();
 pub const MENTAL_CONCEPT_ARCHETYPE_FILE: &str = "src/lex/lexicon/mental_archetypes.txt";
 const DEFAULT_TIMES_THOUGHT: u32 = 0;
+const MAXIMUM_CONCEPT_LENGTH: usize = 100;
 type ThoughtConceptList = Mutex<Vec<ThoughtConcept>>;
 
 pub fn test_mental_concepts() {
@@ -136,6 +137,9 @@ impl<'a> StreamOfThought<'a> {
     }
 
     pub fn learn_new_concept(&mut self, concept_name: String) -> Result<(), Error> {
+        if concept_name.is_empty() || concept_name.len() > MAXIMUM_CONCEPT_LENGTH {
+            return Err(Error::msg("Concept name is invalid"));
+        }
         let mut concepts = self.concepts.get().unwrap().lock().unwrap();
         let known_concept = concepts.iter_mut().find(|c| c.name == concept_name);
         if let Some(thought_concept) = known_concept {
@@ -143,7 +147,7 @@ impl<'a> StreamOfThought<'a> {
         } else {
             let new_concept = ThoughtConcept {
                 name: concept_name,
-                times_thought: 1,
+                times_thought: DEFAULT_TIMES_THOUGHT + 1,
             };
             concepts.push(new_concept);
         }
@@ -215,8 +219,9 @@ mod tests {
     #[tokio::test]
     async fn test_stream_initialization() {
         let stream = StreamOfThought::new(MENTAL_CONCEPT_ARCHETYPE_FILE);
+
         assert!(
-            !stream.last_thought_stream.is_empty(),
+            stream.last_thought_stream.is_empty(),
             "Should initialize with empty thought stream"
         );
         assert!(
